@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Group Performance Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:       #0d0f14;
+    --surface:  #13161e;
+    --surface2: #1a1e28;
+    --surface3: #20253200;
+    --border:   rgba(255,255,255,0.07);
+    --border2:  rgba(255,255,255,0.12);
+    --text:     #eef0f6;
+    --muted:    #6b7290;
+    --accent:   #4f8fff;
+
+    --green:    #22d98a;
+    --green-bg: rgba(34,217,138,0.12);
+    --red:      #ff5566;
+    --red-bg:   rgba(255,85,102,0.12);
+    --amber:    #ffb340;
+    --amber-bg: rgba(255,179,64,0.12);
+
+    --radius: 12px;
+
+    /* Club colours — vivid, each clearly distinct */
+    --c-newcastle: #4f8fff;   /* electric blue   */
+    --c-kotara:    #00e5b0;   /* neon mint        */
+    --c-edgeworth: #ff6b35;   /* hot orange       */
+    --c-thornton:  #bf7aff;   /* vivid violet     */
+    --c-greenhills:#ffdd00;   /* sharp yellow     */
+    --c-lakehaven: #ff3d7f;   /* hot pink         */
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* Subtle grid texture on bg */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* NAV */
+  .top-nav {
+    background: rgba(13,15,20,0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 14px 18px 14px 0;
+    border-right: 1px solid var(--border);
+    margin-right: 16px;
+    white-space: nowrap;
+    background: linear-gradient(135deg, #4f8fff, #bf7aff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .nav-tabs { display: flex; gap: 0; overflow-x: auto; }
+  .nav-tab {
+    padding: 14px 16px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: color 0.2s;
+    letter-spacing: 0.01em;
+  }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .nav-right { margin-left: auto; padding: 10px 0; }
+  .update-badge {
+    background: var(--green-bg);
+    color: var(--green);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid rgba(34,217,138,0.2);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* LAYOUT */
+  .page { display: none; padding: 28px 24px; max-width: 1400px; margin: 0 auto; position: relative; z-index: 1; }
+  .page.active { display: block; }
+
+  /* SECTION HEADER */
+  .section-header { margin-bottom: 24px; }
+  .section-header h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--text);
+  }
+  .section-header p { color: var(--muted); font-size: 13px; }
+
+  /* GRID */
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .grid-6 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: var(--border2); }
+  .card-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .card-club-name { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .club-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+  /* METRIC CARDS */
+  .metric-card {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    opacity: 0.6;
+  }
+  .metric-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .metric-value { font-size: 24px; font-weight: 700; color: var(--text); line-height: 1; font-family: 'Syne', sans-serif; }
+  .metric-sub { font-size: 11px; color: var(--muted); margin-top: 5px; }
+  .metric-value.positive { color: var(--green); }
+  .metric-value.negative { color: var(--red); }
+
+  /* BADGE */
+  .badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 10px; font-family: 'DM Mono', monospace; }
+  .badge.green { background: var(--green-bg); color: var(--green); border: 1px solid rgba(34,217,138,0.2); }
+  .badge.red   { background: var(--red-bg);   color: var(--red);   border: 1px solid rgba(255,85,102,0.2); }
+  .badge.amber { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(255,179,64,0.2); }
+  .badge.blue  { background: rgba(79,143,255,0.12); color: var(--accent); border: 1px solid rgba(79,143,255,0.2); }
+
+  /* TABLE */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .data-table th {
+    text-align: left;
+    color: var(--muted);
+    font-weight: 500;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .data-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: var(--surface2); }
+  .data-table td.pos { color: var(--green); font-weight: 600; }
+  .data-table td.neg { color: var(--red); font-weight: 600; }
+
+  /* CHART WRAPPER */
+  .chart-wrap { position: relative; width: 100%; }
+  .chart-wrap.h200 { height: 200px; }
+  .chart-wrap.h240 { height: 240px; }
+  .chart-wrap.h280 { height: 280px; }
+  .chart-wrap.h320 { height: 320px; }
+
+  /* DIVIDER */
+  .divider { margin: 20px 0; border: none; border-top: 1px solid var(--border); }
+
+  /* STATS ROW */
+  .stats-row { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .stat-pill { background: var(--surface2); border-radius: 8px; padding: 8px 12px; flex: 1; min-width: 80px; border: 1px solid var(--border); }
+  .stat-pill .label { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; }
+  .stat-pill .val { font-size: 15px; font-weight: 700; margin-top: 3px; font-family: 'Syne', sans-serif; }
+
+  /* PERFORMANCE TABLE */
+  .perf-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .perf-table th {
+    padding: 8px 10px;
+    text-align: right;
+    color: var(--muted);
+    font-weight: 500;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border);
+  }
+  .perf-table th:first-child { text-align: left; }
+  .perf-table td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--border); color: var(--text); }
+  .perf-table td:first-child { text-align: left; font-weight: 500; }
+  .perf-table tr:last-child td { border-bottom: none; }
+  .perf-table td.good { color: var(--green); font-weight: 600; }
+  .perf-table td.warn { color: var(--amber); font-weight: 600; }
+  .perf-table td.bad  { color: var(--red);   font-weight: 600; }
+
+  /* SELECT CLUB / MONTH */
+  .club-selector { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+  .club-btn {
+    padding: 7px 16px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    background: var(--surface2);
+    color: var(--muted);
+    transition: all 0.18s;
+    letter-spacing: 0.02em;
+  }
+  .club-btn:hover { border-color: var(--border2); color: var(--text); }
+  .club-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 0 16px rgba(79,143,255,0.35); }
+
+  /* INSTRUCTIONS BANNER */
+  .info-banner {
+    background: rgba(79,143,255,0.08);
+    border: 1px solid rgba(79,143,255,0.2);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: #a8c8ff;
+  }
+  .info-banner strong { font-weight: 600; color: var(--accent); }
+
+  /* CODE BLOCKS */
+  pre {
+    background: #0a0c11 !important;
+    border: 1px solid var(--border) !important;
+    color: #a8c8ff !important;
+  }
+  code { color: var(--green); }
+
+  /* ORDERED / UNORDERED LISTS in update page */
+  ol, ul { color: var(--text); }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    .grid-4 { grid-template-columns: repeat(2, 1fr); }
+    .grid-3 { grid-template-columns: repeat(2, 1fr); }
+    .grid-6 { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 600px) {
+    .grid-2, .grid-3, .grid-4, .grid-6 { grid-template-columns: 1fr; }
+    .page { padding: 16px; }
+    .top-nav { padding: 0 12px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <div class="nav-logo">Group Dashboard</div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" onclick="showPage('group')">Group Totals</div>
+    <div class="nav-tab" onclick="showPage('clubs')">Club Yield &amp; Members</div>
+    <div class="nav-tab" onclick="showPage('monthly')">Monthly Review</div>
+    <div class="nav-tab" onclick="showPage('monthtotals')">Month Totals</div>
+    <div class="nav-tab" onclick="showPage('update')">How to Update</div>
+  </div>
+  <div class="nav-right">
+    <span class="update-badge" id="sync-badge">Connecting to Sheets...</span>
+  </div>
+</nav>
+
+<!-- ===== GROUP TOTALS PAGE ===== -->
+<div id="page-group" class="page active">
+  <div class="section-header">
+    <h2>Group totals</h2>
+    <p>All 6 clubs combined — members, yield and income overview</p>
+  </div>
+
+  <div class="grid-4" style="margin-bottom:20px;">
+    <div class="metric-card">
+      <div class="metric-label">Total DD members</div>
+      <div class="metric-value">7,757</div>
+      <div class="metric-sub">Goal: 8,500 &nbsp;<span class="badge red">-743</span></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Total FP members</div>
+      <div class="metric-value">3,350</div>
+      <div class="metric-sub">Jan 2026</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Total members</div>
+      <div class="metric-value">11,107</div>
+      <div class="metric-sub">DD + FP combined</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">DD yield average</div>
+      <div class="metric-value">22.75</div>
+      <div class="metric-sub">Goal: 23.50 &nbsp;<span class="badge amber">-0.75</span></div>
+    </div>
+  </div>
+
+  <div class="grid-4" style="margin-bottom:20px;">
+    <div class="metric-card">
+      <div class="metric-label">Total group DD income</div>
+      <div class="metric-value">$764,711</div>
+      <div class="metric-sub">Goal: $865,583 &nbsp;<span class="badge red">-$100,872</span></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Total group FP income</div>
+      <div class="metric-value">$101,202</div>
+      <div class="metric-sub">Current month (Newcastle sector)</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Total income (per week)</div>
+      <div class="metric-value">$199,750</div>
+      <div class="metric-sub">$865,583 / month target</div>
+    </div>
+    <div class="metric-card" id="grp-arrears-card">
+      <div class="metric-label">Arrears collected (Clubwise)</div>
+      <div class="metric-value" id="grp-arrears-value" style="font-size:20px;">—</div>
+      <div class="metric-sub">Group total — current period</div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:20px;">
+    <div class="card">
+      <div class="card-title">Total DD members — monthly trend</div>
+      <div class="chart-wrap h240"><canvas id="grp-dd-members" aria-label="Total DD members trend">Group DD members trend chart</canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Total members (DD + FP) — monthly trend</div>
+      <div class="chart-wrap h240"><canvas id="grp-total-members" aria-label="Total members trend">Total members trend chart</canvas></div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:20px;">
+    <div class="card">
+      <div class="card-title">DD yield average — monthly trend</div>
+      <div class="chart-wrap h240"><canvas id="grp-yield" aria-label="DD yield average trend">DD yield trend chart</canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Total DD members vs FP members — monthly</div>
+      <div class="chart-wrap h240"><canvas id="grp-split" aria-label="DD vs FP member split">DD vs FP split chart</canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Group totals — monthly data table</div>
+    <div style="overflow-x:auto;">
+      <table class="data-table" id="grp-table"></table>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:20px;">
+    <div class="card-title">Arrears collected in Clubwise — current period by club</div>
+    <div style="overflow-x:auto;">
+      <table class="data-table" id="grp-arrears-table">
+        <thead>
+          <tr>
+            <th>Club</th>
+            <th style="text-align:right">Arrears Collected</th>
+          </tr>
+        </thead>
+        <tbody id="grp-arrears-body">
+          <tr><td colspan="2" style="color:var(--muted);padding:20px;text-align:center">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CLUBS PAGE ===== -->
+<div id="page-clubs" class="page">
+  <div class="section-header">
+    <h2>Club yield &amp; members</h2>
+    <p>Individual club performance — select a club to view detail</p>
+  </div>
+
+  <div class="club-selector" id="club-selector"></div>
+
+  <div id="club-detail"></div>
+</div>
+
+<!-- ===== MONTHLY REVIEW PAGE ===== -->
+<div id="page-monthly" class="page">
+  <div class="section-header">
+    <h2>Monthly review</h2>
+    <p>Sales, retention and member movement — updated 27 March 2026</p>
+  </div>
+
+  <div class="grid-4" style="margin-bottom:20px;">
+    <div class="metric-card">
+      <div class="metric-label">Total joiners</div>
+      <div class="metric-value positive">231</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Total leavers</div>
+      <div class="metric-value negative">299</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Net movement</div>
+      <div class="metric-value negative">-68</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Sales growth (vs target)</div>
+      <div class="metric-value negative">-118</div>
+      <div class="metric-sub">Target: 50</div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:20px;">
+    <div class="card">
+      <div class="card-title">Monthly movement — all clubs</div>
+      <div class="chart-wrap h240"><canvas id="mv-chart" aria-label="Monthly movement bar chart">Movement chart</canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Sales stats — lead to sale %</div>
+      <div class="chart-wrap h240"><canvas id="sales-chart" aria-label="Lead to sale percentages">Sales stats chart</canvas></div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:20px;">
+    <div class="card">
+      <div class="card-title">CHS scores — monthly trend</div>
+      <div class="chart-wrap h240"><canvas id="chs-chart" aria-label="CHS scores by club">CHS chart</canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">OSAT scores — monthly trend</div>
+      <div class="chart-wrap h240"><canvas id="osat-chart" aria-label="OSAT scores by club">OSAT chart</canvas></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-title">Performance benchmarks — current month</div>
+    <div style="overflow-x:auto; margin-bottom:12px;">
+      <table class="perf-table" id="perf-table"></table>
+    </div>
+    <div style="font-size:11px; color:var(--muted);">
+      Benchmarks: Lead:Sale — Bad &lt;8% | Below avg 8–11% | Avg 12–16% | Above avg 17–21% | Good &gt;22%
+      &nbsp;&nbsp;|&nbsp;&nbsp; Lead:Appt — Bad &lt;20% | Avg 30–39% | Good &gt;50%
+      &nbsp;&nbsp;|&nbsp;&nbsp; Appt Show — Bad &lt;50% | Avg 60–69% | Good &gt;80%
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Detailed monthly metrics — all clubs</div>
+    <div style="overflow-x:auto;">
+      <table class="data-table" id="monthly-detail-table"></table>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MONTH TOTALS PAGE ===== -->
+<div id="page-monthtotals" class="page">
+  <div class="section-header">
+    <h2>Month totals</h2>
+    <p>Finalised end-of-month snapshots — one tab per completed month</p>
+  </div>
+
+  <div class="club-selector" id="month-selector"></div>
+  <div id="month-detail"></div>
+</div>
+
+
+<div id="page-update" class="page">
+  <div class="section-header">
+    <h2>How to update this dashboard</h2>
+    <p>Weekly update instructions for both users</p>
+  </div>
+
+  <div class="info-banner">
+    <strong>Current limitation:</strong> This dashboard uses data embedded at build time. To enable live Google Sheets sync, follow the instructions below to connect via Google Sheets API. Both users will then always see current data.
+  </div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">Option A — Google Sheets live sync (recommended)</div>
+    <ol style="padding-left:20px; line-height:2; color:var(--text); font-size:13px;">
+      <li>Open your Google Sheet → <strong>Extensions → Apps Script</strong></li>
+      <li>Paste the provided <code>doGet()</code> Web App script (see below)</li>
+      <li>Deploy as <strong>Web App</strong> → Access: "Anyone with the link" — this does NOT make your sheet public, only exposes a read-only JSON endpoint</li>
+      <li>Copy the deployment URL and paste it into the <code>SHEET_URL</code> variable at the top of this HTML file</li>
+      <li>The dashboard will auto-fetch fresh data each time it loads</li>
+    </ol>
+    <pre style="background:var(--surface2); border-radius:6px; padding:14px; font-size:12px; overflow-x:auto; margin-top:12px; line-height:1.6;">
+// Paste into Apps Script and deploy as Web App
+function doGet(e) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const result = {};
+  const sheetNames = [
+    'Yeild&Members',
+    'Group Totals',
+    'Weekly Updates',
+    'March Totals',
+    // Add new month sheets here as you create them e.g. 'April Totals'
+  ];
+  sheetNames.forEach(name => {
+    const sheet = ss.getSheetByName(name);
+    if (sheet) {
+      result[name] = sheet.getDataRange().getValues();
+    }
+  });
+  return ContentService
+    .createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}</pre>
+  </div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">Option B — weekly manual update (current method)</div>
+    <ol style="padding-left:20px; line-height:2; color:var(--text); font-size:13px;">
+      <li>Open the Google Sheet → <strong>File → Download → Microsoft Excel (.xlsx)</strong></li>
+      <li>Send the file to your developer / Claude to regenerate the dashboard HTML</li>
+      <li>Replace the old HTML file and re-share the link with both users</li>
+      <li>Update the "Updated" date badge in the nav bar (top right)</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Sharing access (both options)</div>
+    <ul style="padding-left:20px; line-height:2; color:var(--text); font-size:13px;">
+      <li>Host the HTML file on any private server, intranet, or Google Drive (set share to specific people only)</li>
+      <li>If using Google Drive hosting: right-click → Share → add the 2 email addresses → Viewer access</li>
+      <li>For password protection without a server: consider <strong>Netlify</strong> (free tier) with password-protected deploy, or share via a private Google Sites page</li>
+      <li>The dashboard requires no backend, database, or login system — it is a single self-contained HTML file</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+
+const CLUBS = ['Newcastle','Kotara','Edgeworth','Thornton','Greenhills','Lake Haven'];
+const CLUB_COLORS = ['#4f8fff','#00e5b0','#ff6b35','#bf7aff','#ffdd00','#ff3d7f'];
+
+// Yield & Members data (from Yeild&Members tab)
+// Format: { club, rows: [{month, ddMembers, fpMembers, weeklyYield, nmm}] }
+const yieldData = {
+  Newcastle: [
+    {month:'Jun 24',ddMembers:1701,fpMembers:null,weeklyYield:22.70,nmm:null},
+    {month:'Jul 24',ddMembers:1780,fpMembers:null,weeklyYield:22.74,nmm:79},
+    {month:'Aug 24',ddMembers:1820,fpMembers:null,weeklyYield:22.83,nmm:40},
+    {month:'Sep 24',ddMembers:1821,fpMembers:null,weeklyYield:22.89,nmm:1},
+    {month:'Oct 24',ddMembers:1848,fpMembers:null,weeklyYield:22.94,nmm:27},
+    {month:'Nov 24',ddMembers:1846,fpMembers:null,weeklyYield:23.00,nmm:-2},
+    {month:'Dec 24',ddMembers:1854,fpMembers:null,weeklyYield:22.93,nmm:8},
+    {month:'Jan 25',ddMembers:1871,fpMembers:554,weeklyYield:22.95,nmm:17},
+    {month:'Feb 25',ddMembers:1875,fpMembers:606,weeklyYield:22.96,nmm:4},
+    {month:'Mar 25',ddMembers:1897,fpMembers:641,weeklyYield:23.09,nmm:22},
+    {month:'Apr 25',ddMembers:1897,fpMembers:665,weeklyYield:23.15,nmm:0},
+    {month:'May 25',ddMembers:1903,fpMembers:688,weeklyYield:23.21,nmm:6},
+    {month:'Jun 25',ddMembers:1856,fpMembers:704,weeklyYield:23.26,nmm:-47},
+    {month:'Jul 25',ddMembers:1831,fpMembers:715,weeklyYield:23.27,nmm:-25},
+    {month:'Aug 25',ddMembers:1778,fpMembers:735,weeklyYield:23.34,nmm:-53},
+    {month:'Sep 25',ddMembers:1777,fpMembers:755,weeklyYield:23.36,nmm:-1},
+    {month:'Oct 25',ddMembers:1781,fpMembers:788,weeklyYield:23.40,nmm:4},
+    {month:'Nov 25',ddMembers:1780,fpMembers:799,weeklyYield:23.44,nmm:-1},
+    {month:'Dec 25',ddMembers:1741,fpMembers:811,weeklyYield:23.43,nmm:-39},
+    {month:'Jan 26',ddMembers:1676,fpMembers:824,weeklyYield:23.46,nmm:-65},
+    {month:'Feb 26',ddMembers:1687,fpMembers:846,weeklyYield:null,nmm:11},
+  ],
+  Kotara: [
+    {month:'Jun 24',ddMembers:1319,fpMembers:null,weeklyYield:22.67,nmm:null},
+    {month:'Jul 24',ddMembers:1335,fpMembers:null,weeklyYield:22.69,nmm:16},
+    {month:'Aug 24',ddMembers:1312,fpMembers:null,weeklyYield:22.84,nmm:-23},
+    {month:'Sep 24',ddMembers:1368,fpMembers:null,weeklyYield:22.87,nmm:56},
+    {month:'Oct 24',ddMembers:1376,fpMembers:null,weeklyYield:22.91,nmm:8},
+    {month:'Nov 24',ddMembers:1320,fpMembers:null,weeklyYield:22.92,nmm:-56},
+    {month:'Dec 24',ddMembers:1281,fpMembers:null,weeklyYield:22.93,nmm:-39},
+    {month:'Jan 25',ddMembers:1263,fpMembers:461,weeklyYield:22.98,nmm:-18},
+    {month:'Feb 25',ddMembers:1261,fpMembers:492,weeklyYield:23.04,nmm:-2},
+    {month:'Mar 25',ddMembers:1270,fpMembers:522,weeklyYield:23.07,nmm:9},
+    {month:'Apr 25',ddMembers:1228,fpMembers:527,weeklyYield:23.06,nmm:-42},
+    {month:'May 25',ddMembers:1229,fpMembers:546,weeklyYield:23.17,nmm:1},
+    {month:'Jun 25',ddMembers:1243,fpMembers:563,weeklyYield:23.17,nmm:14},
+    {month:'Jul 25',ddMembers:1231,fpMembers:582,weeklyYield:23.20,nmm:-12},
+    {month:'Aug 25',ddMembers:1185,fpMembers:602,weeklyYield:23.27,nmm:-46},
+    {month:'Sep 25',ddMembers:1176,fpMembers:613,weeklyYield:23.26,nmm:-9},
+    {month:'Oct 25',ddMembers:1167,fpMembers:632,weeklyYield:23.46,nmm:-9},
+    {month:'Nov 25',ddMembers:1165,fpMembers:644,weeklyYield:24.19,nmm:-2},
+    {month:'Dec 25',ddMembers:1153,fpMembers:656,weeklyYield:24.14,nmm:-12},
+    {month:'Jan 26',ddMembers:1138,fpMembers:673,weeklyYield:24.12,nmm:-15},
+    {month:'Feb 26',ddMembers:1151,fpMembers:579,weeklyYield:null,nmm:13},
+  ],
+  Edgeworth: [
+    {month:'Jun 24',ddMembers:1554,fpMembers:null,weeklyYield:22.38,nmm:null},
+    {month:'Jul 24',ddMembers:1574,fpMembers:null,weeklyYield:22.37,nmm:null},
+    {month:'Aug 24',ddMembers:1564,fpMembers:null,weeklyYield:22.42,nmm:null},
+    {month:'Sep 24',ddMembers:1557,fpMembers:null,weeklyYield:22.42,nmm:null},
+    {month:'Oct 24',ddMembers:1541,fpMembers:null,weeklyYield:22.59,nmm:null},
+    {month:'Nov 24',ddMembers:1566,fpMembers:null,weeklyYield:22.67,nmm:25},
+    {month:'Dec 24',ddMembers:1544,fpMembers:null,weeklyYield:22.56,nmm:-22},
+    {month:'Jan 25',ddMembers:1492,fpMembers:459,weeklyYield:22.55,nmm:-52},
+    {month:'Feb 25',ddMembers:1469,fpMembers:490,weeklyYield:22.60,nmm:-23},
+    {month:'Mar 25',ddMembers:1480,fpMembers:510,weeklyYield:22.73,nmm:11},
+    {month:'Apr 25',ddMembers:1446,fpMembers:523,weeklyYield:22.71,nmm:-34},
+    {month:'May 25',ddMembers:1441,fpMembers:533,weeklyYield:22.76,nmm:-5},
+    {month:'Jun 25',ddMembers:1451,fpMembers:557,weeklyYield:22.81,nmm:10},
+    {month:'Jul 25',ddMembers:1416,fpMembers:582,weeklyYield:22.83,nmm:-35},
+    {month:'Aug 25',ddMembers:1391,fpMembers:588,weeklyYield:22.85,nmm:-25},
+    {month:'Sep 25',ddMembers:1396,fpMembers:600,weeklyYield:22.88,nmm:5},
+    {month:'Oct 25',ddMembers:1391,fpMembers:613,weeklyYield:23.21,nmm:-5},
+    {month:'Nov 25',ddMembers:1413,fpMembers:635,weeklyYield:23.91,nmm:22},
+    {month:'Dec 25',ddMembers:1421,fpMembers:646,weeklyYield:23.90,nmm:8},
+    {month:'Jan 26',ddMembers:1437,fpMembers:658,weeklyYield:23.90,nmm:16},
+    {month:'Feb 26',ddMembers:1501,fpMembers:509,weeklyYield:null,nmm:64},
+  ],
+  Thornton: [
+    {month:'Jun 24',ddMembers:1261,fpMembers:null,weeklyYield:null,nmm:null},
+    {month:'Jul 24',ddMembers:1242,fpMembers:null,weeklyYield:22.74,nmm:null},
+    {month:'Aug 24',ddMembers:1211,fpMembers:null,weeklyYield:22.80,nmm:null},
+    {month:'Sep 24',ddMembers:1169,fpMembers:null,weeklyYield:22.82,nmm:null},
+    {month:'Oct 24',ddMembers:1150,fpMembers:null,weeklyYield:22.89,nmm:null},
+    {month:'Nov 24',ddMembers:1127,fpMembers:null,weeklyYield:22.90,nmm:null},
+    {month:'Dec 24',ddMembers:1102,fpMembers:null,weeklyYield:22.93,nmm:null},
+    {month:'Jan 25',ddMembers:1074,fpMembers:492,weeklyYield:22.90,nmm:-28},
+    {month:'Feb 25',ddMembers:1057,fpMembers:501,weeklyYield:22.90,nmm:-17},
+    {month:'Mar 25',ddMembers:1075,fpMembers:515,weeklyYield:22.98,nmm:18},
+    {month:'Apr 25',ddMembers:1083,fpMembers:521,weeklyYield:22.98,nmm:8},
+    {month:'May 25',ddMembers:1079,fpMembers:521,weeklyYield:23.00,nmm:-4},
+    {month:'Jun 25',ddMembers:1077,fpMembers:519,weeklyYield:23.02,nmm:-2},
+    {month:'Jul 25',ddMembers:1103,fpMembers:513,weeklyYield:23.10,nmm:26},
+    {month:'Aug 25',ddMembers:1140,fpMembers:537,weeklyYield:23.17,nmm:37},
+    {month:'Sep 25',ddMembers:1140,fpMembers:544,weeklyYield:23.16,nmm:0},
+    {month:'Oct 25',ddMembers:1162,fpMembers:539,weeklyYield:23.23,nmm:22},
+    {month:'Nov 25',ddMembers:1164,fpMembers:536,weeklyYield:23.21,nmm:2},
+    {month:'Dec 25',ddMembers:1152,fpMembers:538,weeklyYield:23.20,nmm:-12},
+    {month:'Jan 26',ddMembers:1156,fpMembers:547,weeklyYield:23.20,nmm:4},
+    {month:'Feb 26',ddMembers:1153,fpMembers:547,weeklyYield:null,nmm:-3},
+  ],
+  Greenhills: [
+    {month:'Jun 24',ddMembers:1196,fpMembers:null,weeklyYield:null,nmm:null},
+    {month:'Jul 24',ddMembers:1206,fpMembers:null,weeklyYield:22.48,nmm:null},
+    {month:'Aug 24',ddMembers:1177,fpMembers:null,weeklyYield:22.58,nmm:null},
+    {month:'Sep 24',ddMembers:1168,fpMembers:null,weeklyYield:22.59,nmm:null},
+    {month:'Oct 24',ddMembers:1150,fpMembers:null,weeklyYield:22.64,nmm:null},
+    {month:'Nov 24',ddMembers:1146,fpMembers:null,weeklyYield:22.67,nmm:-4},
+    {month:'Dec 24',ddMembers:1143,fpMembers:null,weeklyYield:22.63,nmm:-3},
+    {month:'Jan 25',ddMembers:1133,fpMembers:357,weeklyYield:22.70,nmm:-10},
+    {month:'Feb 25',ddMembers:1125,fpMembers:375,weeklyYield:22.73,nmm:-8},
+    {month:'Mar 25',ddMembers:1152,fpMembers:398,weeklyYield:22.78,nmm:27},
+    {month:'Apr 25',ddMembers:1116,fpMembers:411,weeklyYield:22.76,nmm:-36},
+    {month:'May 25',ddMembers:1106,fpMembers:422,weeklyYield:22.79,nmm:-10},
+    {month:'Jun 25',ddMembers:1086,fpMembers:438,weeklyYield:22.83,nmm:-20},
+    {month:'Jul 25',ddMembers:1084,fpMembers:444,weeklyYield:22.83,nmm:-2},
+    {month:'Aug 25',ddMembers:1064,fpMembers:471,weeklyYield:22.84,nmm:-20},
+    {month:'Sep 25',ddMembers:1064,fpMembers:484,weeklyYield:22.85,nmm:0},
+    {month:'Oct 25',ddMembers:1081,fpMembers:495,weeklyYield:23.25,nmm:17},
+    {month:'Nov 25',ddMembers:1075,fpMembers:497,weeklyYield:24.04,nmm:-6},
+    {month:'Dec 25',ddMembers:1088,fpMembers:503,weeklyYield:24.05,nmm:13},
+    {month:'Jan 26',ddMembers:1079,fpMembers:508,weeklyYield:24.03,nmm:-9},
+    {month:'Feb 26',ddMembers:1124,fpMembers:371,weeklyYield:null,nmm:45},
+  ],
+  'Lake Haven': [
+    {month:'Jun 24',ddMembers:1019,fpMembers:null,weeklyYield:null,nmm:null},
+    {month:'Jul 24',ddMembers:1016,fpMembers:null,weeklyYield:19.68,nmm:null},
+    {month:'Aug 24',ddMembers:1024,fpMembers:null,weeklyYield:19.81,nmm:null},
+    {month:'Sep 24',ddMembers:1059,fpMembers:null,weeklyYield:19.90,nmm:null},
+    {month:'Oct 24',ddMembers:1075,fpMembers:null,weeklyYield:20.03,nmm:16},
+    {month:'Nov 24',ddMembers:1082,fpMembers:null,weeklyYield:20.19,nmm:7},
+    {month:'Dec 24',ddMembers:1091,fpMembers:50,weeklyYield:20.24,nmm:9},
+    {month:'Jan 25',ddMembers:1091,fpMembers:64,weeklyYield:20.29,nmm:0},
+    {month:'Feb 25',ddMembers:1065,fpMembers:77,weeklyYield:20.36,nmm:-26},
+    {month:'Mar 25',ddMembers:1071,fpMembers:84,weeklyYield:20.55,nmm:6},
+    {month:'Apr 25',ddMembers:1060,fpMembers:102,weeklyYield:20.63,nmm:-11},
+    {month:'May 25',ddMembers:1064,fpMembers:107,weeklyYield:20.73,nmm:4},
+    {month:'Jun 25',ddMembers:1067,fpMembers:107,weeklyYield:20.82,nmm:3},
+    {month:'Jul 25',ddMembers:1061,fpMembers:112,weeklyYield:20.82,nmm:-6},
+    {month:'Aug 25',ddMembers:1003,fpMembers:113,weeklyYield:21.03,nmm:-58},
+    {month:'Sep 25',ddMembers:1001,fpMembers:126,weeklyYield:21.09,nmm:-2},
+    {month:'Oct 25',ddMembers:981,fpMembers:133,weeklyYield:21.15,nmm:-20},
+    {month:'Nov 25',ddMembers:972,fpMembers:136,weeklyYield:21.33,nmm:-9},
+    {month:'Dec 25',ddMembers:948,fpMembers:140,weeklyYield:21.40,nmm:-24},
+    {month:'Jan 26',ddMembers:906,fpMembers:144,weeklyYield:21.54,nmm:-42},
+    {month:'Feb 26',ddMembers:978,fpMembers:151,weeklyYield:null,nmm:72},
+  ],
+};
+
+// Group Totals data
+const groupData = [
+  {month:'Jun 24',ddMembers:8066,fpMembers:null,totalMembers:null,ddYieldAvg:null,avgFpIncome:0},
+  {month:'Jul 24',ddMembers:8153,fpMembers:2496,totalMembers:10649,ddYieldAvg:22.12,avgFpIncome:0},
+  {month:'Aug 24',ddMembers:8108,fpMembers:2095,totalMembers:10203,ddYieldAvg:22.21,avgFpIncome:0},
+  {month:'Sep 24',ddMembers:8142,fpMembers:2213,totalMembers:10355,ddYieldAvg:22.25,avgFpIncome:0},
+  {month:'Oct 24',ddMembers:8140,fpMembers:2292,totalMembers:10432,ddYieldAvg:22.28,avgFpIncome:0},
+  {month:'Nov 24',ddMembers:8087,fpMembers:0,totalMembers:8087,ddYieldAvg:22.33,avgFpIncome:0},
+  {month:'Dec 24',ddMembers:8015,fpMembers:2305,totalMembers:10320,ddYieldAvg:22.37,avgFpIncome:0},
+  {month:'Jan 25',ddMembers:7924,fpMembers:2373,totalMembers:10297,ddYieldAvg:22.39,avgFpIncome:0},
+  {month:'Feb 25',ddMembers:7852,fpMembers:2528,totalMembers:10380,ddYieldAvg:22.43,avgFpIncome:0},
+  {month:'Mar 25',ddMembers:7945,fpMembers:2663,totalMembers:10608,ddYieldAvg:22.52,avgFpIncome:0},
+  {month:'Apr 25',ddMembers:7830,fpMembers:2731,totalMembers:10561,ddYieldAvg:22.55,avgFpIncome:0},
+  {month:'May 25',ddMembers:7822,fpMembers:2812,totalMembers:10634,ddYieldAvg:22.61,avgFpIncome:0},
+  {month:'Jun 25',ddMembers:7780,fpMembers:2888,totalMembers:10668,ddYieldAvg:22.65,avgFpIncome:0},
+  {month:'Jul 25',ddMembers:7757,fpMembers:2943,totalMembers:10700,ddYieldAvg:22.65,avgFpIncome:0},
+  {month:'Aug 25',ddMembers:7561,fpMembers:3045,totalMembers:10606,ddYieldAvg:22.65,avgFpIncome:0},
+  {month:'Sep 25',ddMembers:7554,fpMembers:3109,totalMembers:10663,ddYieldAvg:22.67,avgFpIncome:0},
+  {month:'Oct 25',ddMembers:7563,fpMembers:3193,totalMembers:10756,ddYieldAvg:22.75,avgFpIncome:0},
+  {month:'Nov 25',ddMembers:7569,fpMembers:3244,totalMembers:10813,ddYieldAvg:22.83,avgFpIncome:0},
+  {month:'Dec 25',ddMembers:7503,fpMembers:3290,totalMembers:10793,ddYieldAvg:22.84,avgFpIncome:0},
+  {month:'Jan 26',ddMembers:7392,fpMembers:3350,totalMembers:10742,ddYieldAvg:22.88,avgFpIncome:0},
+  {month:'Feb 26',ddMembers:null,fpMembers:null,totalMembers:null,ddYieldAvg:null,avgFpIncome:0},
+];
+
+// Monthly Review data — populated from live Sheets fetch
+// _loaded flag prevents rendering until live data arrives
+const N6 = () => [null,null,null,null,null,null];
+const monthlyReview = {
+  _loaded: false,
+  clubs: ['Newcastle','Kotara','Edgeworth','Greenhills','Thornton','Lake Haven'],
+  joiners:N6(), leavers:N6(), salesGrowth:N6(), salesTarget:N6(),
+  transferIn:N6(), transferOut:N6(), totalMovement:N6(),
+  appts:N6(), apptsShow:N6(), showSale:N6(), leadsRequired:N6(),
+  leads:N6(), leadToSale:N6(), pctLeadGoal:N6(), subYield:N6(),
+  retention:N6(), visits:N6(), leadToAppt:N6(), apptShow:N6(), pctTarget:N6(),
+  arrears:N6(),
+};
+
+// CHS / OSAT data
+const chsData = {
+  months: ['Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'],
+  Newcastle:  [58.1,59.7,60.3,62.9,62.3,64.9,64.6,62.6],
+  Kotara:     [57.6,59.9,62.1,61.5,61.3,63.7,64.3,66.5],
+  Edgeworth:  [57.3,60.3,59.9,62.1,60.7,65.8,65.1,64.2],
+  Greenhills: [51.8,53.3,55.1,55.6,55.3,58.3,57.6,54.6],
+  Thornton:   [52.4,54.4,52.8,53.5,51.5,53.5,53.1,52.0],
+  'Lake Haven':[49.8,50.3,45.3,45.0,44.9,52.8,52.1,52.4],
+};
+const osatData = {
+  months: ['Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'],
+  Newcastle:  [32.7,34.9,36.9,35.7,39.2,44.0,53.3,50.9],
+  Kotara:     [60.6,58.8,65.7,64.7,64.5,70.0,73.3,77.4],
+  Edgeworth:  [51.7,58.8,57.1,57.8,57.8,56.2,60.0,44.7],
+  Greenhills: [54.8,61.3,62.9,63.2,61.5,54.8,52.9,48.6],
+  Thornton:   [58.3,62.5,63.4,64.3,66.0,63.3,59.5,57.5],
+  'Lake Haven':[50.0,51.5,51.6,55.3,53.3,57.5,61.0,59.5],
+};
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+
+function fmt(v, decimals=0) {
+  if (v === null || v === undefined || isNaN(v)) return '—';
+  return typeof v === 'number' ? v.toFixed(decimals) : v;
+}
+function fmtPct(v) {
+  if (v === null || v === undefined || isNaN(v)) return '—';
+  return (v * 100).toFixed(1) + '%';
+}
+function fmtNmm(v) {
+  if (v === null || v === undefined || isNaN(v)) return '—';
+  return (v > 0 ? '+' : '') + v;
+}
+function getClass(v) { return v > 0 ? 'pos' : (v < 0 ? 'neg' : ''); }
+
+// ── CHART DEFAULTS ────────────────────────────────────────────────────────────
+
+function lineOpts(label, color, borderDash) {
+  return {
+    label, borderColor: color, backgroundColor: color+'22',
+    borderWidth: 2, pointRadius: 3, pointHoverRadius: 5,
+    tension: 0.3, fill: false,
+    borderDash: borderDash || []
+  };
+}
+function makeChart(id, type, labels, datasets, extra={}) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  return new Chart(ctx, {
+    type,
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: datasets.length > 1,
+          position: 'top',
+          labels: { boxWidth: 10, font: { size: 11, family: 'DM Sans' }, padding: 12, color: '#6b7290' }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { font: { size: 11, family: 'DM Sans' }, maxRotation: 45, autoSkip: false, color: '#6b7290' },
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          border: { color: 'rgba(255,255,255,0.07)' }
+        },
+        y: {
+          ticks: { font: { size: 11, family: 'DM Sans' }, color: '#6b7290' },
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          border: { color: 'rgba(255,255,255,0.07)' }
+        }
+      },
+      ...extra
+    }
+  });
+}
+
+// ── GROUP TOTALS PAGE ─────────────────────────────────────────────────────────
+
+let groupCharts = {};
+function buildGroupPage() {
+  Object.values(groupCharts).forEach(c => { try { c.destroy(); } catch(e){} });
+  groupCharts = {};
+
+  const valid = groupData.filter(r => r.ddMembers !== null);
+  const labels = valid.map(r => r.month);
+  const ddArr = valid.map(r => r.ddMembers);
+  const totalArr = valid.map(r => r.totalMembers);
+  const yieldArr = valid.map(r => r.ddYieldAvg);
+  const fpArr = valid.map(r => r.fpMembers || 0);
+
+  groupCharts['dd'] = makeChart('grp-dd-members', 'line', labels, [{
+    ...lineOpts('DD Members','#4f8fff'), data: ddArr, fill: true
+  }]);
+
+  groupCharts['total'] = makeChart('grp-total-members', 'line', labels.filter((_,i) => totalArr[i] !== null),
+    [
+      { ...lineOpts('DD Members','#4f8fff'), data: valid.filter(r=>r.totalMembers!==null).map(r=>r.ddMembers) },
+      { ...lineOpts('FP Members','#00e5b0'), data: valid.filter(r=>r.totalMembers!==null).map(r=>r.fpMembers||0) },
+      { ...lineOpts('Total','#ff6b35'), data: valid.filter(r=>r.totalMembers!==null).map(r=>r.totalMembers) },
+    ]);
+
+  groupCharts['yield'] = makeChart('grp-yield', 'line', labels.filter((_,i)=>yieldArr[i]!==null), [{
+    ...lineOpts('DD Yield Avg','#bf7aff'), data: valid.filter(r=>r.ddYieldAvg!==null).map(r=>r.ddYieldAvg)
+  }]);
+
+  groupCharts['split'] = makeChart('grp-split', 'bar', labels, [
+    { label:'DD Members', data: ddArr, backgroundColor:'#4f8fff55', borderColor:'#4f8fff', borderWidth:1 },
+    { label:'FP Members', data: fpArr, backgroundColor:'#00e5b055', borderColor:'#00e5b0', borderWidth:1 }
+  ], { scales: { x: { stacked: false, ticks:{font:{size:11},maxRotation:45,autoSkip:false,color:'#6b7290'}, grid:{color:'rgba(255,255,255,0.04)'}, border:{color:'rgba(255,255,255,0.07)'} }, y: { ticks:{font:{size:11},color:'#6b7290'}, grid:{color:'rgba(255,255,255,0.04)'}, border:{color:'rgba(255,255,255,0.07)'} } } });
+
+  // Table
+  const tbl = document.getElementById('grp-table');
+  tbl.innerHTML = '<thead><tr><th>Month</th><th>DD Members</th><th>FP Members</th><th>Total Members</th><th>DD Yield Avg</th></tr></thead>';
+  const tbody = document.createElement('tbody');
+  groupData.filter(r=>r.ddMembers!==null).forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.month}</td><td>${r.ddMembers?.toLocaleString()||'—'}</td><td>${r.fpMembers!==null?r.fpMembers.toLocaleString():'—'}</td><td>${r.totalMembers?.toLocaleString()||'—'}</td><td>${r.ddYieldAvg?r.ddYieldAvg.toFixed(2):'—'}</td>`;
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+
+  // Arrears collected table
+  const arrearsBody = document.getElementById('grp-arrears-body');
+  if (arrearsBody && monthlyReview._loaded) {
+    const clubs = monthlyReview.clubs;
+    const arrVals = safeVals(monthlyReview, 'arrears');
+    const CLUB_COLORS_MAP = {
+      'Newcastle': 'var(--c-newcastle)', 'Kotara': 'var(--c-kotara)',
+      'Edgeworth': 'var(--c-edgeworth)', 'Greenhills': 'var(--c-greenhills)',
+      'Thornton': 'var(--c-thornton)', 'Lake Haven': 'var(--c-lakehaven)'
+    };
+    let rows = '';
+    let groupTotal = 0;
+    clubs.forEach((club, i) => {
+      const v = arrVals[i];
+      const display = v !== null ? '$' + fmt(v, 2) : '—';
+      if (v !== null) groupTotal += v;
+      rows += `<tr>
+        <td><span class="club-dot" style="background:${CLUB_COLORS_MAP[club]||'var(--accent)'}"></span> ${club}</td>
+        <td style="text-align:right">${display}</td>
+      </tr>`;
+    });
+    rows += `<tr style="border-top:1px solid var(--border2); font-weight:600;">
+      <td>Group Total</td>
+      <td style="text-align:right; color:var(--green)">$${fmt(groupTotal, 2)}</td>
+    </tr>`;
+    arrearsBody.innerHTML = rows;
+    // Update summary card
+    const cardVal = document.getElementById('grp-arrears-value');
+    if (cardVal) cardVal.textContent = '$' + fmt(groupTotal, 2);
+  } else if (arrearsBody) {
+    arrearsBody.innerHTML = '<tr><td colspan="2" style="color:var(--muted);padding:20px;text-align:center">No arrears data — load from Weekly Updates sheet</td></tr>';
+  }
+}
+
+let clubCharts = {};
+function buildClubsPage() {
+  const sel = document.getElementById('club-selector');
+  CLUBS.forEach((club, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'club-btn' + (i === 0 ? ' active' : '');
+    btn.textContent = club;
+    btn.onclick = () => {
+      document.querySelectorAll('.club-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderClub(club, i);
+    };
+    sel.appendChild(btn);
+  });
+  renderClub(CLUBS[0], 0);
+}
+
+function renderClub(club, idx) {
+  Object.values(clubCharts).forEach(c => c.destroy());
+  clubCharts = {};
+
+  const color = CLUB_COLORS[idx];
+  const data = yieldData[club];
+  const valid = data.filter(r => r.ddMembers !== null);
+  const labels = valid.map(r => r.month);
+  const withFp = data.filter(r => r.fpMembers !== null);
+
+  const detail = document.getElementById('club-detail');
+  const latest = data[data.length - 1];
+  const prev = data[data.length - 2] || {};
+  const nmm = latest.nmm;
+
+  detail.innerHTML = `
+  <div class="grid-4" style="margin-bottom:20px;">
+    <div class="metric-card">
+      <div class="metric-label">DD members</div>
+      <div class="metric-value">${latest.ddMembers?.toLocaleString()||'—'}</div>
+      <div class="metric-sub">${prev.ddMembers ? (latest.ddMembers - prev.ddMembers > 0 ? '+':'') + (latest.ddMembers - prev.ddMembers) + ' vs prior' : ''}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">FP members</div>
+      <div class="metric-value">${latest.fpMembers?.toLocaleString()||'—'}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Weekly yield</div>
+      <div class="metric-value">${latest.weeklyYield ? '$'+latest.weeklyYield.toFixed(2) : '—'}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">NMM (net member movement)</div>
+      <div class="metric-value ${nmm > 0 ? 'positive' : nmm < 0 ? 'negative' : ''}">${nmm !== null && nmm !== undefined ? (nmm>0?'+':'')+nmm : '—'}</div>
+    </div>
+  </div>
+  <div class="grid-2" style="margin-bottom:20px;">
+    <div class="card">
+      <div class="card-title">DD member number — monthly</div>
+      <div class="chart-wrap h240"><canvas id="club-dd" aria-label="DD members trend for ${club}">DD members chart</canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Weekly yield — monthly</div>
+      <div class="chart-wrap h240"><canvas id="club-yield" aria-label="Weekly yield trend for ${club}">Yield chart</canvas></div>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-title">${club} — monthly data table</div>
+    <div style="overflow-x:auto;"><table class="data-table" id="club-table"></table></div>
+  </div>`;
+
+  clubCharts['dd'] = makeChart('club-dd', 'line', labels, [{
+    ...lineOpts('DD Members', color), data: valid.map(r=>r.ddMembers), fill: true
+  }]);
+
+  const yLabels = valid.filter(r=>r.weeklyYield!==null).map(r=>r.month);
+  clubCharts['yield'] = makeChart('club-yield', 'line', yLabels, [{
+    ...lineOpts('Weekly Yield', color), data: valid.filter(r=>r.weeklyYield!==null).map(r=>r.weeklyYield)
+  }]);
+
+  const tbl = document.getElementById('club-table');
+  tbl.innerHTML = '<thead><tr><th>Month</th><th>DD Members</th><th>FP Members</th><th>Weekly Yield</th><th>NMM</th></tr></thead>';
+  const tbody = document.createElement('tbody');
+  data.filter(r=>r.ddMembers!==null).forEach(r => {
+    const nmCls = r.nmm > 0 ? 'pos' : r.nmm < 0 ? 'neg' : '';
+    tbody.innerHTML += `<tr>
+      <td>${r.month}</td>
+      <td>${r.ddMembers?.toLocaleString()}</td>
+      <td>${r.fpMembers!==null?r.fpMembers.toLocaleString():'—'}</td>
+      <td>${r.weeklyYield ? '$'+r.weeklyYield.toFixed(2) : '—'}</td>
+      <td class="${nmCls}">${r.nmm !== null && r.nmm !== undefined ? fmtNmm(r.nmm) : '—'}</td>
+    </tr>`;
+  });
+  tbl.appendChild(tbody);
+}
+
+// ── MONTHLY REVIEW PAGE ───────────────────────────────────────────────────────
+
+const DARK_SCALES = {
+  x: { ticks:{font:{size:11},color:'#6b7290'}, grid:{color:'rgba(255,255,255,0.04)'}, border:{color:'rgba(255,255,255,0.07)'} },
+  y: { ticks:{font:{size:11},color:'#6b7290'}, grid:{color:'rgba(255,255,255,0.04)'}, border:{color:'rgba(255,255,255,0.07)'} }
+};
+
+function perfClass(metric, val) {
+  if (val === null || val === undefined) return '';
+  if (metric === 'leadToSale') { const p=val*100; return p<8?'bad':p<12?'warn':p>=17?'good':''; }
+  if (metric === 'leadToAppt') { const p=val*100; return p<20?'bad':p<30?'warn':p>=50?'good':''; }
+  if (metric === 'apptShow')   { const p=val*100; return p<50?'bad':p<60?'warn':p>=80?'good':''; }
+  return '';
+}
+
+function safeVals(obj, key) {
+  const v = obj[key];
+  return Array.isArray(v) ? v : [null,null,null,null,null,null];
+}
+
+function safeAvg(vals) {
+  const nums = vals.filter(v => v !== null && v !== undefined);
+  return nums.length ? nums.reduce((a,b)=>a+b,0)/nums.length : null;
+}
+
+function safeTotal(vals) {
+  return vals.filter(v => v !== null && v !== undefined).reduce((a,b)=>a+b,0);
+}
+
+let monthlyCharts = {};
+function buildMonthlyPage() {
+  Object.values(monthlyCharts).forEach(c => { try { c.destroy(); } catch(e){} });
+  monthlyCharts = {};
+
+  const detail = document.getElementById('page-monthly');
+  if (!monthlyReview._loaded) {
+    // Show loading state — data not yet arrived from Sheets
+    const pt = document.getElementById('perf-table');
+    const dt = document.getElementById('monthly-detail-table');
+    if (pt) pt.innerHTML = '<tbody><tr><td colspan="8" style="color:var(--muted);padding:20px;text-align:center">Loading live data...</td></tr></tbody>';
+    if (dt) dt.innerHTML = '';
+    return;
+  }
+
+  const clubs = monthlyReview.clubs;
+  const colors = CLUB_COLORS;
+
+  // Movement chart
+  monthlyCharts['mv'] = makeChart('mv-chart', 'bar', clubs, [
+    { label:'Joiners',      data: safeVals(monthlyReview,'joiners'),       backgroundColor:'#00e5b055', borderColor:'#00e5b0', borderWidth:1 },
+    { label:'Leavers',      data: safeVals(monthlyReview,'leavers').map(v => v !== null ? -v : null), backgroundColor:'#ff556655', borderColor:'#ff5566', borderWidth:1 },
+    { label:'Net Movement', data: safeVals(monthlyReview,'totalMovement'), backgroundColor:'#4f8fff55', borderColor:'#4f8fff', borderWidth:1 },
+  ], { scales: DARK_SCALES });
+
+  // Lead to sale chart
+  monthlyCharts['sales'] = makeChart('sales-chart', 'bar', clubs, [{
+    label:'Lead to Sale %',
+    data: safeVals(monthlyReview,'leadToSale').map(v => v !== null ? parseFloat((v*100).toFixed(1)) : null),
+    backgroundColor: colors.map(c => c+'55'), borderColor: colors, borderWidth: 1
+  }], { scales: { ...DARK_SCALES, y: { ...DARK_SCALES.y, ticks: { ...DARK_SCALES.y.ticks, callback: v => v+'%' }, suggestedMax: 35 } } });
+
+  // CHS chart
+  monthlyCharts['chs'] = makeChart('chs-chart', 'line', chsData.months, CLUBS.map((club, i) => ({
+    label: club, data: chsData[club] || [], borderColor: colors[i],
+    backgroundColor: 'transparent', borderWidth: 2, pointRadius: 3, tension: 0.3
+  })), { scales: { ...DARK_SCALES, y: { ...DARK_SCALES.y, suggestedMin:40, suggestedMax:70 } } });
+
+  // OSAT chart
+  monthlyCharts['osat'] = makeChart('osat-chart', 'line', osatData.months, CLUBS.map((club, i) => ({
+    label: club, data: osatData[club] || [], borderColor: colors[i],
+    backgroundColor: 'transparent', borderWidth: 2, pointRadius: 3, tension: 0.3
+  })), { scales: { ...DARK_SCALES, y: { ...DARK_SCALES.y, suggestedMin:25, suggestedMax:80 } } });
+
+  // Performance benchmark table
+  const pt = document.getElementById('perf-table');
+  pt.innerHTML = `<thead><tr><th>Metric</th>${clubs.map(c=>`<th style="text-align:right">${c}</th>`).join('')}<th style="text-align:right">Group Avg</th></tr></thead>`;
+  const ptb = document.createElement('tbody');
+  [
+    { label:'Lead to sale %',     key:'leadToSale', metric:'leadToSale', format: v=>fmtPct(v) },
+    { label:'Lead to appt %',     key:'leadToAppt', metric:'leadToAppt', format: v=>fmtPct(v) },
+    { label:'Appt show %',        key:'apptShow',   metric:'apptShow',   format: v=>fmtPct(v) },
+    { label:'Show : sale %',      key:'showSale',   metric:null,         format: v=>fmtPct(v) },
+    { label:'% of lead goal',     key:'pctLeadGoal',metric:null,         format: v=>fmtPct(v) },
+    { label:'Sub yield',          key:'subYield',   metric:null,         format: v=>'$'+fmt(v,2) },
+    { label:'Retention %',        key:'retention',  metric:null,         format: v=>fmtPct(v) },
+    { label:'Monthly avg visits', key:'visits',     metric:null,         format: v=>fmt(v,2) },
+    { label:'Arrears collected (CW)', key:'arrears', metric:null,        format: v=>v!==null?'$'+fmt(v,2):'—' },
+  ].forEach(row => {
+    const vals = safeVals(monthlyReview, row.key);
+    const avg = safeAvg(vals);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${row.label}</td>` +
+      vals.map(v => `<td class="${row.metric ? perfClass(row.metric,v) : ''}" style="text-align:right">${row.format(v)}</td>`).join('') +
+      `<td style="text-align:right">${row.format(avg)}</td>`;
+    ptb.appendChild(tr);
+  });
+  pt.appendChild(ptb);
+
+  // Detailed monthly table
+  const dt = document.getElementById('monthly-detail-table');
+  dt.innerHTML = `<thead><tr><th>Metric</th>${clubs.map(c=>`<th>${c}</th>`).join('')}<th>Group Total/Avg</th></tr></thead>`;
+  const dtb = document.createElement('tbody');
+  [
+    {label:'Joiners',             key:'joiners',       signed:false},
+    {label:'Leavers',             key:'leavers',       signed:false},
+    {label:'Sales growth',        key:'salesGrowth',   signed:true},
+    {label:'Sales growth target', key:'salesTarget',   signed:false},
+    {label:'Transfer in',         key:'transferIn',    signed:false},
+    {label:'Transfer out',        key:'transferOut',   signed:false},
+    {label:'Total movement',      key:'totalMovement', signed:true},
+    {label:'Appointments',        key:'appts',         signed:false},
+    {label:'Appts show',          key:'apptsShow',     signed:false},
+    {label:'Leads required',      key:'leadsRequired', signed:false, fmtFn:v=>fmt(v,0)},
+    {label:'Leads',               key:'leads',         signed:false},
+    {label:'Arrears collected (CW)', key:'arrears',    signed:false, fmtFn:v=>v!==null?'$'+fmt(v,2):'—', isTotal:true},
+  ].forEach(row => {
+    const vals = safeVals(monthlyReview, row.key);
+    const total = row.isTotal ? safeTotal(vals) : safeTotal(vals);
+    const f = row.fmtFn || (v => v !== null ? v.toFixed(0) : '—');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${row.label}</td>` +
+      vals.map(v => {
+        const cls = row.signed ? getClass(v) : '';
+        return `<td class="${cls}">${v !== null ? (row.signed && v>0?'+':'') + f(v) : '—'}</td>`;
+      }).join('') +
+      `<td class="${row.signed ? getClass(total) : ''}">${row.signed && total>0?'+':''}${f(total)}</td>`;
+    dtb.appendChild(tr);
+  });
+  dt.appendChild(dtb);
+}
+
+// ── NAV ───────────────────────────────────────────────────────────────────────
+
+let built = {};
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  event.currentTarget.classList.add('active');
+  // Data pages always rebuild to ensure live data is shown after fetch completes
+  const alwaysRebuild = ['group', 'monthly', 'monthtotals'].includes(id);
+  if (!built[id] || alwaysRebuild) {
+    if (id === 'group') buildGroupPage();
+    if (id === 'clubs') buildClubsPage();
+    if (id === 'monthly') buildMonthlyPage();
+    if (id === 'monthtotals') buildMonthTotalsPage();
+    built[id] = true;
+  }
+}
+
+// ── MONTH TOTALS DATA ─────────────────────────────────────────────────────────
+// Keyed by month label e.g. 'March 2026'
+const monthTotalsData = {};
+
+function parseMonthTotalsSheet(rows, label) {
+  // Same structure as the Weekly Updates / Monthly Review sheet
+  return { ...parseMonthlySheet(rows), label };
+}
+
+function buildMonthTotalsPage() {
+  const sel = document.getElementById('month-selector');
+  sel.innerHTML = '';
+  const months = Object.keys(monthTotalsData);
+  if (months.length === 0) {
+    document.getElementById('month-detail').innerHTML =
+      '<div class="info-banner">No finalised month sheets have been loaded yet. ' +
+      'Add the sheet name to the Apps Script (e.g. <code>\'March Totals\'</code>) and redeploy.</div>';
+    return;
+  }
+  months.forEach((m, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'club-btn' + (i === 0 ? ' active' : '');
+    btn.textContent = m;
+    btn.onclick = () => {
+      document.querySelectorAll('#month-selector .club-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderMonthTotals(m);
+    };
+    sel.appendChild(btn);
+  });
+  renderMonthTotals(months[0]);
+}
+
+let monthTotalsCharts = {};
+function renderMonthTotals(label) {
+  Object.values(monthTotalsCharts).forEach(c => { try { c.destroy(); } catch(e){} });
+  monthTotalsCharts = {};
+
+  const { monthly, chs, osat } = monthTotalsData[label];
+  const clubs = monthly.clubs;
+  const colors = CLUB_COLORS;
+  const detail = document.getElementById('month-detail');
+
+  // Summary metrics
+  const totalJoiners = monthly.joiners.reduce((a,b)=>a+b,0);
+  const totalLeavers = monthly.leavers.reduce((a,b)=>a+b,0);
+  const netMove = monthly.totalMovement.reduce((a,b)=>a+b,0);
+  const salesDiff = monthly.salesGrowth.reduce((a,b)=>a+b,0) - monthly.salesTarget.reduce((a,b)=>a+b,0);
+
+  detail.innerHTML = `
+  <div class="grid-4" style="margin-bottom:20px;">
+    <div class="metric-card">
+      <div class="metric-label">Total joiners</div>
+      <div class="metric-value positive">${totalJoiners}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Total leavers</div>
+      <div class="metric-value negative">${totalLeavers}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Net movement</div>
+      <div class="metric-value ${netMove>=0?'positive':'negative'}">${netMove>0?'+':''}${netMove}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Sales growth vs target</div>
+      <div class="metric-value ${salesDiff>=0?'positive':'negative'}">${salesDiff>0?'+':''}${salesDiff}</div>
+      <div class="metric-sub">Target: ${monthly.salesTarget.reduce((a,b)=>a+b,0)}</div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:20px;">
+    <div class="card">
+      <div class="card-title">Monthly movement — all clubs</div>
+      <div class="chart-wrap h240"><canvas id="mt-mv-chart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Sales stats — lead to sale %</div>
+      <div class="chart-wrap h240"><canvas id="mt-sales-chart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:20px;">
+    <div class="card">
+      <div class="card-title">CHS scores — trend</div>
+      <div class="chart-wrap h240"><canvas id="mt-chs-chart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">OSAT scores — trend</div>
+      <div class="chart-wrap h240"><canvas id="mt-osat-chart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-title">Performance benchmarks — ${label}</div>
+    <div style="overflow-x:auto; margin-bottom:12px;">
+      <table class="perf-table" id="mt-perf-table"></table>
+    </div>
+    <div style="font-size:11px; color:var(--muted);">
+      Benchmarks: Lead:Sale — Bad &lt;8% | Below avg 8–11% | Avg 12–16% | Above avg 17–21% | Good &gt;22%
+      &nbsp;&nbsp;|&nbsp;&nbsp; Lead:Appt — Bad &lt;20% | Avg 30–39% | Good &gt;50%
+      &nbsp;&nbsp;|&nbsp;&nbsp; Appt Show — Bad &lt;50% | Avg 60–69% | Good &gt;80%
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Detailed metrics — ${label}</div>
+    <div style="overflow-x:auto;">
+      <table class="data-table" id="mt-detail-table"></table>
+    </div>
+  </div>`;
+
+  // Movement chart
+  monthTotalsCharts['mv'] = makeChart('mt-mv-chart', 'bar', clubs, [
+    { label:'Joiners',      data: safeVals(monthly,'joiners'),                                     backgroundColor:'#00e5b055', borderColor:'#00e5b0', borderWidth:1 },
+    { label:'Leavers',      data: safeVals(monthly,'leavers').map(v => v !== null ? -v : null),    backgroundColor:'#ff556655', borderColor:'#ff5566', borderWidth:1 },
+    { label:'Net Movement', data: safeVals(monthly,'totalMovement'),                               backgroundColor:'#4f8fff55', borderColor:'#4f8fff', borderWidth:1 },
+  ], { scales: DARK_SCALES });
+
+  // Lead to sale chart
+  monthTotalsCharts['sales'] = makeChart('mt-sales-chart', 'bar', clubs, [{
+    label:'Lead to Sale %',
+    data: safeVals(monthly,'leadToSale').map(v => v !== null ? parseFloat((v*100).toFixed(1)) : null),
+    backgroundColor: colors.map(c => c+'55'), borderColor: colors, borderWidth: 1
+  }], { scales: { ...DARK_SCALES, y: { ...DARK_SCALES.y, ticks: { ...DARK_SCALES.y.ticks, callback: v=>v+'%' }, suggestedMax:35 } } });
+
+  // CHS chart
+  const chsMonths = chs.months || [];
+  monthTotalsCharts['chs'] = makeChart('mt-chs-chart', 'line', chsMonths, CLUBS.map((club, i) => ({
+    label: club, data: chs[club] || [], borderColor: colors[i],
+    backgroundColor: 'transparent', borderWidth: 2, pointRadius: 3, tension: 0.3
+  })), { scales: { ...DARK_SCALES, y: { ...DARK_SCALES.y, suggestedMin:40, suggestedMax:70 } } });
+
+  // OSAT chart
+  const osatMonths = osat.months || [];
+  monthTotalsCharts['osat'] = makeChart('mt-osat-chart', 'line', osatMonths, CLUBS.map((club, i) => ({
+    label: club, data: osat[club] || [], borderColor: colors[i],
+    backgroundColor: 'transparent', borderWidth: 2, pointRadius: 3, tension: 0.3
+  })), { scales: { ...DARK_SCALES, y: { ...DARK_SCALES.y, suggestedMin:25, suggestedMax:80 } } });
+
+  // Performance table
+  const pt = document.getElementById('mt-perf-table');
+  pt.innerHTML = `<thead><tr><th>Metric</th>${clubs.map(c=>`<th style="text-align:right">${c}</th>`).join('')}<th style="text-align:right">Group Avg</th></tr></thead>`;
+  const ptb = document.createElement('tbody');
+  [
+    { label:'Lead to sale %',     key:'leadToSale', metric:'leadToSale', format:v=>fmtPct(v) },
+    { label:'Lead to appt %',     key:'leadToAppt', metric:'leadToAppt', format:v=>fmtPct(v) },
+    { label:'Appt show %',        key:'apptShow',   metric:'apptShow',   format:v=>fmtPct(v) },
+    { label:'Show : sale %',      key:'showSale',   metric:null,         format:v=>fmtPct(v) },
+    { label:'% of lead goal',     key:'pctLeadGoal',metric:null,         format:v=>fmtPct(v) },
+    { label:'Sub yield',          key:'subYield',   metric:null,         format:v=>'$'+fmt(v,2) },
+    { label:'Retention %',        key:'retention',  metric:null,         format:v=>fmtPct(v) },
+    { label:'Monthly avg visits', key:'visits',     metric:null,         format:v=>fmt(v,2) },
+  ].forEach(row => {
+    const vals = safeVals(monthly, row.key);
+    const avg = safeAvg(vals);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${row.label}</td>` +
+      vals.map(v => `<td class="${row.metric?perfClass(row.metric,v):''}" style="text-align:right">${row.format(v)}</td>`).join('') +
+      `<td style="text-align:right">${row.format(avg)}</td>`;
+    ptb.appendChild(tr);
+  });
+  pt.appendChild(ptb);
+
+  // Detailed table
+  const dt = document.getElementById('mt-detail-table');
+  dt.innerHTML = `<thead><tr><th>Metric</th>${clubs.map(c=>`<th>${c}</th>`).join('')}<th>Group Total/Avg</th></tr></thead>`;
+  const dtb = document.createElement('tbody');
+  [
+    {label:'Joiners',             key:'joiners',       signed:false},
+    {label:'Leavers',             key:'leavers',       signed:false},
+    {label:'Sales growth',        key:'salesGrowth',   signed:true},
+    {label:'Sales growth target', key:'salesTarget',   signed:false},
+    {label:'Transfer in',         key:'transferIn',    signed:false},
+    {label:'Transfer out',        key:'transferOut',   signed:false},
+    {label:'Total movement',      key:'totalMovement', signed:true},
+    {label:'Appointments',        key:'appts',         signed:false},
+    {label:'Appts show',          key:'apptsShow',     signed:false},
+    {label:'Leads required',      key:'leadsRequired', signed:false, fmtFn:v=>fmt(v,0)},
+    {label:'Leads',               key:'leads',         signed:false},
+  ].forEach(row => {
+    const vals = safeVals(monthly, row.key);
+    const total = safeTotal(vals);
+    const f = row.fmtFn || (v => v !== null ? v.toFixed(0) : '—');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${row.label}</td>` +
+      vals.map(v => { const cls=row.signed?getClass(v):''; return `<td class="${cls}">${v!==null?(row.signed&&v>0?'+':'')+f(v):'—'}</td>`; }).join('') +
+      `<td class="${row.signed?getClass(total):''}">${row.signed&&total>0?'+':''}${f(total)}</td>`;
+    dtb.appendChild(tr);
+  });
+  dt.appendChild(dtb);
+}
+
+
+
+// Add finalised month sheets here as you create them each month
+const MONTH_SHEETS = [
+  { sheetName: 'March Totals', label: 'March 2026' },
+  // { sheetName: 'April Totals', label: 'April 2026' },
+];
+
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbxvkX-LXIzpRY-FJ7XMfODwZS4mVa6Y40rtI7yM_avOCaIea4WDv6zbZiI64Z0dODOD/exec';
+
+function parseDate(v) {
+  if (!v) return null;
+  const d = new Date(v);
+  if (isNaN(d)) return null;
+  return d.toLocaleDateString('en-AU', { month: 'short', year: '2-digit' }).replace(' ', ' ');
+}
+function toNum(v) {
+  const n = parseFloat(v);
+  return isNaN(n) ? null : n;
+}
+// Safely evaluate simple arithmetic formula strings like "=6/6" or "= 18 / 32"
+function toEval(v) {
+  if (typeof v !== 'string') return null;
+  try {
+    const expr = v.replace(/^=/, '').replace(/\s/g, '');
+    // Only allow digits, operators and decimal points — no cell refs
+    if (!/^[\d.+\-*/()]+$/.test(expr)) return null;
+    const result = Function('"use strict"; return (' + expr + ')')();
+    return isFinite(result) ? result : null;
+  } catch(e) { return null; }
+}
+
+function parseYieldSheet(rows) {
+  // Clubs appear in two columns: left col (0) and right col (20)
+  // Each club block: row 0 = club name, row 1 = header, rows 2+ = data until next club name
+  const result = {};
+  const blocks = [];
+  // Find club header rows in left col
+  for (let i = 0; i < rows.length; i++) {
+    const v = rows[i][0];
+    if (typeof v === 'string' && ['Newcastle','Kotara','Edgeworth'].includes(v)) {
+      blocks.push({ club: v, startRow: i + 2, colOffset: 0 });
+    }
+    const v2 = rows[i][20];
+    if (typeof v2 === 'string' && ['Thornton','Greenhills','Lake Haven'].includes(v2)) {
+      blocks.push({ club: v2, startRow: i + 2, colOffset: 20 });
+    }
+  }
+  blocks.forEach(({ club, startRow, colOffset }) => {
+    const data = [];
+    for (let r = startRow; r < rows.length; r++) {
+      const row = rows[r];
+      const dateVal = row[colOffset];
+      if (!dateVal || typeof dateVal === 'string' && !dateVal.match(/\d{4}/)) break;
+      const month = parseDate(dateVal);
+      if (!month) break;
+      // Detect if FP column is present (col 2 or 22 — 3rd col in block)
+      const c = colOffset;
+      // Col layout: 0=date, 1=ddMembers, 2=fpMembers or weeklyYield, 3=weeklyYield or NMM, 4=NMM
+      const col1 = toNum(row[c + 1]);
+      const col2 = toNum(row[c + 2]);
+      const col3 = toNum(row[c + 3]);
+      const col4 = toNum(row[c + 4]);
+      // If col2 looks like a member count (>100), it's FP members
+      let ddMembers, fpMembers, weeklyYield, nmm;
+      if (col2 !== null && col2 > 100) {
+        ddMembers = col1; fpMembers = col2; weeklyYield = col3; nmm = col4;
+      } else {
+        ddMembers = col1; fpMembers = null; weeklyYield = col2; nmm = col3;
+      }
+      data.push({ month, ddMembers, fpMembers, weeklyYield, nmm });
+    }
+    result[club] = data;
+  });
+  return result;
+}
+
+function parseGroupSheet(rows) {
+  const data = [];
+  let inDDSection = false, inYieldSection = false;
+  const ddRows = [], yieldRows = [];
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    if (r[0] === 'Total DD Members') { inDDSection = true; inYieldSection = false; continue; }
+    if (r[0] === 'DD Yeild Average') { inYieldSection = true; inDDSection = false; continue; }
+    if (inDDSection) {
+      const d = parseDate(r[0]);
+      if (d) ddRows.push({ month: d, ddMembers: toNum(r[1]), fpMembers: toNum(r[2]), totalMembers: toNum(r[3]) });
+    }
+    if (inYieldSection) {
+      const d = parseDate(r[0]);
+      if (d) yieldRows.push({ month: d, ddYieldAvg: toNum(r[1]) });
+    }
+  }
+  ddRows.forEach(row => {
+    const y = yieldRows.find(r => r.month === row.month);
+    data.push({ ...row, ddYieldAvg: y ? y.ddYieldAvg : null, avgFpIncome: 0 });
+  });
+  return data;
+}
+
+function parseMonthlySheet(rows) {
+  // Row 1 has club names: Newcastle, Kotara, Edgeworth | Greenhills, Thornton, Lake Haven
+  const clubOrder = ['Newcastle','Kotara','Edgeworth','Greenhills','Thornton','Lake Haven'];
+  const metricMap = {
+    'Joiners': 'joiners', 'Leavers (Month total)': 'leavers',
+    'Sales Growth': 'salesGrowth', 'Sales Growth Target': 'salesTarget',
+    'Transfer In': 'transferIn', 'Transfer Out': 'transferOut',
+    'Total Movement': 'totalMovement', 'Appts': 'appts', 'Appts Show': 'apptsShow',
+    'Show : Sale': 'showSale', 'Leads Required': 'leadsRequired', 'Leads': 'leads',
+    'Lead to Sale': 'leadToSale', '% Lead Goal': 'pctLeadGoal', 'Sub Yeild': 'subYield',
+    'Retention %': 'retention', 'Visits (Monthly)': 'visits',
+    'Lead To Appt': 'leadToAppt', 'Appt Show': 'apptShow', '% Of Target': 'pctTarget',
+    'Arrears Collected in CW': 'arrears'
+  };
+  const result = { clubs: clubOrder };
+  Object.values(metricMap).forEach(k => result[k] = [null,null,null,null,null,null]);
+
+  // Columns: left block cols 1,2,3 = Newcastle, Kotara, Edgeworth; right block cols 7,8,9 = Greenhills, Thornton, Lake Haven
+  const leftCols = [1, 2, 3]; // Newcastle, Kotara, Edgeworth
+  const rightCols = [7, 8, 9]; // Greenhills, Thornton, Lake Haven
+
+  rows.forEach(row => {
+    const label = String(row[0] || '').trim();
+    const key = metricMap[label];
+    if (!key) return;
+    // Left block
+    leftCols.forEach((col, i) => {
+      const v = toNum(row[col]);
+      // For Show:Sale, the cell contains a simple arithmetic formula e.g. "=6/6" or "= 18 / 32"
+      // These are manually keyed sale counts — evaluate them directly
+      if (v !== null) result[key][i] = v;
+      else if (key === 'showSale' && typeof row[col] === 'string') {
+        const evaluated = toEval(row[col]);
+        if (evaluated !== null) result[key][i] = evaluated;
+      }
+    });
+    // Right block
+    rightCols.forEach((col, i) => {
+      const v = toNum(row[col]);
+      if (v !== null) result[key][i + 3] = v;
+      else if (key === 'showSale' && typeof row[col] === 'string') {
+        const evaluated = toEval(row[col]);
+        if (evaluated !== null) result[key][i + 3] = evaluated;
+      }
+    });
+  });
+
+  // Derive all formula-based metrics from the raw values we successfully read.
+  // openpyxl returns formula strings (e.g. "=B3/B14") for calculated cells, so
+  // toNum() returns null for those — we must calculate them ourselves.
+  for (let i = 0; i < 6; i++) {
+    const joiners     = result.joiners[i]     ?? 0;
+    const leavers     = result.leavers[i]     ?? 0;
+    const transferIn  = result.transferIn[i]  ?? 0;
+    const transferOut = result.transferOut[i] ?? 0;
+    const leads       = result.leads[i]       ?? 0;
+    const appts       = result.appts[i]       ?? 0;
+    const apptsShow   = result.apptsShow[i]   ?? 0;
+
+    result.salesGrowth[i]   = joiners - leavers;
+    result.totalMovement[i] = (transferIn - transferOut) + (joiners - leavers);
+    result.leadToSale[i]    = leads > 0 ? joiners / leads : null;
+    result.leadToAppt[i]    = leads > 0 ? apptsShow / leads : null;
+    result.apptShow[i]      = appts > 0 ? apptsShow / appts : null;
+    // showSale is manually entered as inline formula (e.g. =6/6) — only override if not already parsed
+    if (result.showSale[i] === null) result.showSale[i] = apptsShow > 0 ? joiners / apptsShow : null;
+    result.leadsRequired[i] = result.leadToSale[i] > 0 ? (leavers + transferOut) / result.leadToSale[i] : null;
+    result.pctLeadGoal[i]   = result.leadsRequired[i] > 0 ? leads / result.leadsRequired[i] : null;
+    // pctTarget = joiners / (leavers + transferIn)  [sheet formula: =B3/(B4+B6)]
+    result.pctTarget[i]     = (leavers + transferIn) > 0 ? joiners / (leavers + transferIn) : null;
+  }
+
+  // CHS and OSAT
+  const chs = {}, osat = {};
+  let inCHS = false, inOSAT = false;
+  let chsHeaderRow = null, osatHeaderRow = null;
+  rows.forEach((row, idx) => {
+    const label = String(row[0] || '').trim();
+    if (label === 'CHS')  { inCHS = true; inOSAT = false; chsHeaderRow = idx; return; }
+    if (label === 'OSAT') { inOSAT = true; inCHS = false; osatHeaderRow = idx; return; }
+    const club = label;
+    if (inCHS && clubOrder.includes(club)) {
+      const months = (rows[chsHeaderRow] || []).slice(1).filter(v => v !== null && v !== undefined && String(v).trim() !== '');
+      chs[club] = row.slice(1, 1 + months.length).map(toNum);
+    }
+    if (inOSAT && clubOrder.includes(club)) {
+      const months = (rows[osatHeaderRow] || []).slice(1).filter(v => v !== null && v !== undefined && String(v).trim() !== '');
+      osat[club] = row.slice(1, 1 + months.length).map(toNum);
+    }
+    if (inCHS  && club === 'Average') inCHS  = false;
+    if (inOSAT && club === 'Average') inOSAT = false;
+  });
+
+  // CHS/OSAT month labels come from the header rows in the sheet.
+  if (chsHeaderRow !== null && rows[chsHeaderRow]) {
+    chs.months = rows[chsHeaderRow].slice(1).filter(v => v !== null && v !== undefined && String(v).trim() !== '').map(String);
+  }
+  if (osatHeaderRow !== null && rows[osatHeaderRow]) {
+    osat.months = rows[osatHeaderRow].slice(1).filter(v => v !== null && v !== undefined && String(v).trim() !== '').map(String);
+  }
+
+  return { monthly: result, chs, osat };
+}
+
+async function fetchFromSheets() {
+  const badge = document.getElementById('sync-badge');
+  try {
+    const res = await fetch(SHEET_URL);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const raw = await res.json();
+
+    const yieldSheet = raw['Yeild&Members'];
+    const groupSheet = raw['Group Totals'];
+    const monthlySheet = raw['Weekly Updates'];
+
+    if (yieldSheet) {
+      const parsed = parseYieldSheet(yieldSheet);
+      Object.assign(yieldData, parsed);
+    }
+    if (groupSheet) {
+      const parsed = parseGroupSheet(groupSheet);
+      groupData.length = 0;
+      parsed.forEach(r => groupData.push(r));
+    }
+    if (monthlySheet) {
+      const { monthly, chs, osat } = parseMonthlySheet(monthlySheet);
+      // Fully replace all arrays — don't merge, to prevent stale static data bleeding through
+      Object.keys(monthly).forEach(k => { monthlyReview[k] = monthly[k]; });
+      Object.keys(chs).forEach(k => { chsData[k] = chs[k]; });
+      Object.keys(osat).forEach(k => { osatData[k] = osat[k]; });
+      monthlyReview._loaded = true;
+    }
+
+    // Load each finalised month sheet
+    MONTH_SHEETS.forEach(({ sheetName, label }) => {
+      const sheet = raw[sheetName];
+      if (sheet) {
+        const { monthly, chs, osat } = parseMonthlySheet(sheet);
+        monthly._loaded = true;
+        monthTotalsData[label] = { monthly, chs, osat };
+      }
+    });
+
+    // Reset built cache so all pages rebuild with fresh data on next visit
+    built = {};
+
+    badge.textContent = 'Live — ' + new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+    badge.style.background = 'var(--green-bg)';
+    badge.style.color = 'var(--green)';
+  } catch (err) {
+    console.warn('Sheets fetch failed, using built-in data:', err);
+    badge.textContent = 'Offline data (27 Mar 2026)';
+    badge.style.background = 'var(--amber-bg)';
+    badge.style.color = 'var(--amber)';
+
+    // Seed March 2026 from static data as offline fallback
+    monthTotalsData['March 2026'] = {
+      monthly: {
+        _loaded: true,
+        clubs: ['Newcastle','Kotara','Edgeworth','Greenhills','Thornton','Lake Haven'],
+        joiners:        [66, 46, 63, 28, 24, 35],
+        leavers:        [73, 31, 54, 48, 49, 43],
+        salesGrowth:    [-7, 15, 9, -20, -25, -8],
+        salesTarget:    [15, 5, 10, 5, 5, 10],
+        transferIn:     [66, 37, 51, 18, 24, 38],
+        transferOut:    [77, 40, 50, 22, 31, 24],
+        totalMovement:  [-18, 12, 10, -24, -32, 6],
+        appts:          [55, 39, 65, 63, 73, 58],
+        apptsShow:      [32, 23, 38, 32, 27, 28],
+        showSale:       [0.4426, 0.3617, 0.5211, 0.5625, 0.50, 0.75],
+        leadsRequired:  [418, 192.6, 254.7, 230.9, 328.5, 242.3],
+        leads:          [285, 251, 211, 122, 146, 160],
+        leadToSale:     [0.2316, 0.1833, 0.2986, 0.2295, 0.1644, 0.2188],
+        pctLeadGoal:    [0.6825, 1.3056, 0.8294, 0.5283, 0.4444, 0.6604],
+        subYield:       [23.46, 24.12, 23.90, 24.03, 23.20, 21.54],
+        retention:      [0.0429, 0.0263, 0.0350, 0.0423, 0.0426, 0.0415],
+        visits:         [5.41, 5.29, 5.59, 4.13, 3.37, 4.47],
+        leadToAppt:     [0.1930, 0.1554, 0.3033, 0.5164, 0.50, 0.3625],
+        apptShow:       [0.5818, 0.5897, 0.5846, 0.5079, 0.3699, 0.4828],
+        pctTarget:      [0.6825, 1.3056, 0.8294, 0.5283, 0.4444, 0.6604],
+      },
+      chs: {
+        months: ['Aug','Sep','Oct','Nov','Dec','Jan'],
+        Newcastle:   [58.1,59.7,60.3,62.9,62.3,64.9],
+        Kotara:      [57.6,59.9,62.1,61.5,61.3,63.7],
+        Edgeworth:   [57.3,60.3,59.9,62.1,60.7,65.8],
+        Greenhills:  [51.8,53.3,55.1,55.6,55.3,58.3],
+        Thornton:    [52.4,54.4,52.8,53.5,51.5,53.5],
+        'Lake Haven':[49.8,50.3,45.3,45.0,44.9,52.8],
+      },
+      osat: {
+        months: ['Aug','Sep','Oct','Nov','Dec','Jan','Feb'],
+        Newcastle:   [32.7,34.9,36.9,35.7,39.2,44.0,64.6],
+        Kotara:      [60.6,58.8,65.7,64.7,64.5,70.0,64.3],
+        Edgeworth:   [51.7,58.8,57.1,57.8,54.3,56.2,65.1],
+        Greenhills:  [54.8,61.3,62.9,63.2,58.5,54.8,57.6],
+        Thornton:    [58.3,62.5,63.4,64.3,62.0,63.3,53.1],
+        'Lake Haven':[50.0,51.5,51.6,55.3,53.2,57.5,52.1],
+      }
+    };
+  }
+  // Always build the group page (default view) after fetch completes or fails
+  buildGroupPage();
+}
+
+fetchFromSheets();
+</script>
+</body>
+</html>
