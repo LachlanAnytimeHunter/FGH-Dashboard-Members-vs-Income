@@ -73,6 +73,12 @@
   tr:hover td { background: var(--surface2); }
   .pos { color: var(--green); } .neg { color: var(--red); } .warn { color: var(--amber); } .neutral { color: var(--text2); }
 
+  /* CLUB & MONTH CONTENT VISIBILITY */
+  .club-content { display: none; }
+  .club-content.active { display: block; }
+  .month-content { display: none; }
+  .month-content.active { display: block; }
+
   /* CLUB SELECTOR */
   .club-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
   .club-tab { padding: 8px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--text2); transition: all .15s; }
@@ -122,11 +128,11 @@
 <nav class="nav">
   <div class="nav-brand"><span>FGH</span> Group Dashboard</div>
   <div class="nav-tabs">
-    <div class="nav-tab active" onclick="showPage('group')">Group Totals</div>
-    <div class="nav-tab" onclick="showPage('clubs')">Club Yield &amp; Members</div>
-    <div class="nav-tab" onclick="showPage('monthly')">Monthly Review</div>
-    <div class="nav-tab" onclick="showPage('monthtotals')">Month Totals</div>
-    <div class="nav-tab" onclick="showPage('howto')">How to Update</div>
+    <div class="nav-tab active" onclick="showPage('group',this)">Group Totals</div>
+    <div class="nav-tab" onclick="showPage('clubs',this)">Club Yield &amp; Members</div>
+    <div class="nav-tab" onclick="showPage('monthly',this)">Monthly Review</div>
+    <div class="nav-tab" onclick="showPage('monthtotals',this)">Month Totals</div>
+    <div class="nav-tab" onclick="showPage('howto',this)">How to Update</div>
   </div>
   <div class="nav-badge">Updated 01 May 2026</div>
 </nav>
@@ -239,12 +245,12 @@
     <h2>Individual club performance — select a club to view detail</h2>
   </div>
   <div class="club-tabs">
-    <div class="club-tab active" onclick="showClub('newcastle')">Newcastle</div>
-    <div class="club-tab" onclick="showClub('kotara')">Kotara</div>
-    <div class="club-tab" onclick="showClub('edgeworth')">Edgeworth</div>
-    <div class="club-tab" onclick="showClub('thornton')">Thornton</div>
-    <div class="club-tab" onclick="showClub('greenhills')">Greenhills</div>
-    <div class="club-tab" onclick="showClub('lakehaven')">Lake Haven</div>
+    <div class="club-tab active" onclick="showClub('newcastle',this)">Newcastle</div>
+    <div class="club-tab" onclick="showClub('kotara',this)">Kotara</div>
+    <div class="club-tab" onclick="showClub('edgeworth',this)">Edgeworth</div>
+    <div class="club-tab" onclick="showClub('thornton',this)">Thornton</div>
+    <div class="club-tab" onclick="showClub('greenhills',this)">Greenhills</div>
+    <div class="club-tab" onclick="showClub('lakehaven',this)">Lake Haven</div>
   </div>
   <div id="club-newcastle" class="club-content active"></div>
   <div id="club-kotara" class="club-content"></div>
@@ -381,8 +387,8 @@
     <h2>Finalised end-of-month snapshots — one tab per completed month</h2>
   </div>
   <div class="month-tabs">
-    <div class="month-tab active" onclick="showMonth('april')">April 2026 ✓</div>
-    <div class="month-tab" onclick="showMonth('march')">March 2026 ✓</div>
+    <div class="month-tab active" onclick="showMonth('april',this)">April 2026 ✓</div>
+    <div class="month-tab" onclick="showMonth('march',this)">March 2026 ✓</div>
   </div>
 
   <!-- APRIL -->
@@ -574,23 +580,24 @@ function doGet(e) {
 
 <script>
 // ─── NAVIGATION ───────────────────────────────────────────────
-function showPage(name) {
+function showPage(name, el) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
-  event.target.classList.add('active');
+  el.classList.add('active');
 }
-function showClub(name) {
+function showClub(name, el) {
   document.querySelectorAll('.club-content').forEach(c => c.classList.remove('active'));
   document.querySelectorAll('.club-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('club-' + name).classList.add('active');
-  event.target.classList.add('active');
+  el.classList.add('active');
+  renderClubCharts(name);
 }
-function showMonth(name) {
+function showMonth(name, el) {
   document.querySelectorAll('.month-content').forEach(c => c.classList.remove('active'));
   document.querySelectorAll('.month-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('month-' + name).classList.add('active');
-  event.target.classList.add('active');
+  el.classList.add('active');
 }
 
 // ─── CHART DEFAULTS ──────────────────────────────────────────
@@ -753,28 +760,31 @@ const clubData = {
 };
 
 const clubNames = {newcastle:'Newcastle',kotara:'Kotara',edgeworth:'Edgeworth',thornton:'Thornton',greenhills:'Greenhills',lakehaven:'Lake Haven'};
-const clubCharts = {};
+const renderedClubs = new Set();
 
-Object.keys(clubData).forEach(id => {
+function renderClubCharts(id) {
+  if (renderedClubs.has(id)) return;
+  renderedClubs.add(id);
+
   const cd = clubData[id];
   const lbls = cd.data.map(r => r[0]);
   const ddArr = cd.data.map(r => r[1]);
   const fpArr = cd.data.map(r => r[2]);
-  const yArr = cd.data.map(r => r[3]);
+  const yArr  = cd.data.map(r => r[3]);
   const el = document.getElementById('club-' + id);
 
-  // Latest with yield
   const lastWithYield = [...cd.data].reverse().find(r => r[3] !== null);
   const yieldVal = lastWithYield ? lastWithYield[3].toFixed(2) : '—';
   const prevDD = cd.data.length >= 2 ? cd.data[cd.data.length-2][1] : null;
   const currDD = cd.data[cd.data.length-1][1];
-  const ddDiff = prevDD ? currDD - prevDD : 0;
+  const currFP = cd.data[cd.data.length-1][2];
+  const ddDiff = prevDD != null ? currDD - prevDD : 0;
   const ddDiffStr = ddDiff >= 0 ? `<span class="pos">+${ddDiff}</span>` : `<span class="neg">${ddDiff}</span>`;
 
   el.innerHTML = `
     <div class="cards">
       <div class="card accent-blue"><div class="card-label">DD Members (Latest)</div><div class="card-value">${currDD.toLocaleString()}</div><div class="card-sub">vs prev month: ${ddDiffStr}</div></div>
-      <div class="card accent-purple"><div class="card-label">FP Members (Latest)</div><div class="card-value">${cd.data[cd.data.length-1][2].toLocaleString()}</div></div>
+      <div class="card accent-purple"><div class="card-label">FP Members (Latest)</div><div class="card-value">${currFP.toLocaleString()}</div></div>
       <div class="card accent-amber"><div class="card-label">Weekly Yield</div><div class="card-value">${yieldVal}</div></div>
     </div>
     <div class="chart-grid">
@@ -789,9 +799,10 @@ Object.keys(clubData).forEach(id => {
       <tbody>${cd.data.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]!==null?r[3].toFixed(2):'—'}</td></tr>`).join('')}</tbody>
     </table></div>
   `;
-  new Chart(document.getElementById(`c-${id}-dd`), lineOpts('DD Members', ACCENT, ddArr, lbls));
-  new Chart(document.getElementById(`c-${id}-fp`), lineOpts('FP Members', ACCENT2, fpArr, lbls));
-  new Chart(document.getElementById(`c-${id}-y`), lineOpts('Yield', AMBER, yArr, lbls));
+
+  new Chart(document.getElementById(`c-${id}-dd`),  lineOpts('DD Members', ACCENT,  ddArr, lbls));
+  new Chart(document.getElementById(`c-${id}-fp`),  lineOpts('FP Members', ACCENT2, fpArr, lbls));
+  new Chart(document.getElementById(`c-${id}-y`),   lineOpts('Yield',      AMBER,   yArr,  lbls));
   new Chart(document.getElementById(`c-${id}-bar`), {
     type: 'bar',
     data: { labels: lbls, datasets: [
@@ -800,7 +811,10 @@ Object.keys(clubData).forEach(id => {
     ]},
     options: { responsive:true, plugins:{legend:{display:true,labels:{boxWidth:10,padding:10}}}, scales:{x:{grid:{color:'#2e3350'}},y:{grid:{color:'#2e3350'}}} }
   });
-});
+}
+
+// Render the default visible club on load
+renderClubCharts('newcastle');
 
 // ─── MONTHLY REVIEW CHARTS ───────────────────────────────────
 // Movement chart - Apr vs Mar
