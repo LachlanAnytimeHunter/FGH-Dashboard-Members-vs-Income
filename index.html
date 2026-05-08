@@ -264,35 +264,35 @@
 <div id="page-monthly" class="page">
   <div class="section-title">
     <h1>Monthly Review</h1>
-    <h2>Sales, retention and member movement — May 2026 (updated 08/05/2026)</h2>
+    <h2 id="monthly-subtitle">Sales, retention and member movement — May 2026 (updated 08/05/2026)</h2>
   </div>
 
   <div class="cards">
     <div class="card accent-green">
       <div class="card-label">Total Joiners</div>
-      <div class="card-value pos">64</div>
+      <div class="card-value pos" id="mr-joiners">64</div>
     </div>
     <div class="card accent-red">
       <div class="card-label">Total Leavers</div>
-      <div class="card-value neg">296</div>
+      <div class="card-value neg" id="mr-leavers">296</div>
     </div>
     <div class="card accent-red">
       <div class="card-label">Net Movement</div>
-      <div class="card-value neg">-245</div>
-      <div class="card-sub">vs April: <span class="neg">-126</span></div>
+      <div class="card-value neg" id="mr-movement">-245</div>
+      <div class="card-sub" id="mr-movement-sub">vs April: <span class="neg">-126</span></div>
     </div>
     <div class="card accent-red">
       <div class="card-label">Sales Growth (vs Target)</div>
-      <div class="card-value neg">-287</div>
-      <div class="card-sub">Target: 55 | Actual: -232</div>
+      <div class="card-value neg" id="mr-salesgrowth">-287</div>
+      <div class="card-sub" id="mr-salesgrowth-sub">Target: 55 | Actual: -232</div>
     </div>
     <div class="card accent-amber">
       <div class="card-label">Total Attrition</div>
-      <div class="card-value" style="font-size:22px">3.97%</div>
+      <div class="card-value" style="font-size:22px" id="mr-attrition">3.97%</div>
     </div>
     <div class="card accent-blue">
       <div class="card-label">Avg Visits (Monthly)</div>
-      <div class="card-value" style="font-size:22px">1.20</div>
+      <div class="card-value" style="font-size:22px" id="mr-visits">1.20</div>
     </div>
   </div>
 
@@ -302,7 +302,7 @@
       <canvas id="chartMovement"></canvas>
     </div>
     <div class="chart-box">
-      <h3>Sales Stats — Lead to Sale % (May MTD)</h3>
+      <h3>Sales Stats — Lead to Sale % (<span id="mr-chart-month">May MTD</span>)</h3>
       <canvas id="chartLeadSale"></canvas>
     </div>
   </div>
@@ -327,30 +327,14 @@
     <div class="bench-item"><div class="bench-label">Lead Goal %</div><div class="bench-bad">Below avg &lt;60%</div><div>Avg 80–99%</div><div class="bench-good">Good ≥100%</div></div>
   </div>
 
-  <h3>Detailed Monthly Metrics — May 2026 (MTD) — All Clubs</h3>
+  <h3 id="mr-table-heading">Detailed Monthly Metrics — May 2026 (MTD) — All Clubs</h3>
   <div class="table-wrap" style="margin-bottom:16px">
     <div class="sector-header">Sector 1 — Newcastle / Kotara / Edgeworth</div>
     <table>
       <thead>
         <tr><th>Metric</th><th>Newcastle</th><th>Kotara</th><th>Edgeworth</th><th>Group Total</th></tr>
       </thead>
-      <tbody>
-        <tr><td>Joiners</td><td>13</td><td>10</td><td>10</td><td><b>33</b></td></tr>
-        <tr><td>Leavers</td><td>66</td><td>38</td><td>54</td><td><b>158</b></td></tr>
-        <tr><td>Sales Growth</td><td class="neg">-53</td><td class="neg">-28</td><td class="neg">-44</td><td class="neg"><b>-125</b></td></tr>
-        <tr><td>Sales Growth Target</td><td>15</td><td>5</td><td>10</td><td><b>30</b></td></tr>
-        <tr><td>Transfer In</td><td>9</td><td>5</td><td>3</td><td><b>17</b></td></tr>
-        <tr><td>Transfer Out</td><td>13</td><td>8</td><td>4</td><td><b>25</b></td></tr>
-        <tr><td>Total Movement</td><td class="neg">-57</td><td class="neg">-31</td><td class="neg">-45</td><td class="neg"><b>-133</b></td></tr>
-        <tr><td>Appointments</td><td>18</td><td>5</td><td>8</td><td><b>31</b></td></tr>
-        <tr><td>Appts Show</td><td>5</td><td>3</td><td>3</td><td><b>11</b></td></tr>
-        <tr><td>Leads</td><td>26</td><td>29</td><td>25</td><td><b>80</b></td></tr>
-        <tr><td>Lead to Sale %</td><td class="pos">50.0%</td><td class="pos">34.5%</td><td class="pos">40.0%</td><td class="pos"><b>41.5%</b></td></tr>
-        <tr><td>Sub Yield</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
-        <tr><td>Attrition %</td><td>3.98%</td><td>3.28%</td><td>3.53%</td><td>3.60%</td></tr>
-        <tr><td>Visits (Monthly)</td><td>1.33</td><td>1.22</td><td>1.32</td><td>1.29</td></tr>
-        <tr><td>Arrears Collected</td><td>$0.00</td><td class="pos">$139.20</td><td class="pos">$348.86</td><td class="pos"><b>$162.69</b></td></tr>
-      </tbody>
+      <tbody id="mr-s1-tbody">
     </table>
   </div>
   <div class="table-wrap">
@@ -359,23 +343,7 @@
       <thead>
         <tr><th>Metric</th><th>Greenhills</th><th>Thornton</th><th>Lake Haven</th><th>Group Total</th></tr>
       </thead>
-      <tbody>
-        <tr><td>Joiners</td><td>13</td><td>4</td><td>14</td><td><b>31</b></td></tr>
-        <tr><td>Leavers</td><td>32</td><td>43</td><td>63</td><td><b>138</b></td></tr>
-        <tr><td>Sales Growth</td><td class="neg">-19</td><td class="neg">-39</td><td class="neg">-49</td><td class="neg"><b>-107</b></td></tr>
-        <tr><td>Sales Growth Target</td><td>5</td><td>10</td><td>10</td><td><b>25</b></td></tr>
-        <tr><td>Transfer In</td><td>4</td><td>6</td><td>4</td><td><b>14</b></td></tr>
-        <tr><td>Transfer Out</td><td>6</td><td>3</td><td>10</td><td><b>19</b></td></tr>
-        <tr><td>Total Movement</td><td class="neg">-21</td><td class="neg">-36</td><td class="neg">-55</td><td class="neg"><b>-112</b></td></tr>
-        <tr><td>Appointments</td><td>13</td><td>9</td><td>29</td><td><b>51</b></td></tr>
-        <tr><td>Appts Show</td><td>22</td><td>3</td><td>15</td><td><b>40</b></td></tr>
-        <tr><td>Leads</td><td>60</td><td>26</td><td>45</td><td><b>131</b></td></tr>
-        <tr><td>Lead to Sale %</td><td class="pos">21.7%</td><td class="warn">15.4%</td><td class="pos">31.1%</td><td class="pos"><b>22.7%</b></td></tr>
-        <tr><td>Sub Yield</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
-        <tr><td>Attrition %</td><td>2.91%</td><td>3.93%</td><td>6.19%</td><td>4.34%</td></tr>
-        <tr><td>Visits (Monthly)</td><td>1.15</td><td>0.91</td><td>1.26</td><td>1.11</td></tr>
-        <tr><td>Arrears Collected</td><td class="pos">$157.85</td><td class="pos">$444.18</td><td class="pos">$153.72</td><td class="pos"><b>$251.92</b></td></tr>
-      </tbody>
+      <tbody id="mr-s2-tbody">
     </table>
   </div>
 </div>
@@ -579,6 +547,151 @@ function doGet(e) {
 </div>
 
 <script>
+// ─── SHEET URL ────────────────────────────────────────────────
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbyRpbp_DQb2-71a3qd9f58ERlRonPqTNik37Zna5Eaaqzc-Fp2tDyswgCofL6aefN9Z/exec';
+
+// ─── LIVE DATA LOADER ─────────────────────────────────────────
+let chartMovementInst, chartLeadSaleInst;
+
+async function loadFromSheets() {
+  try {
+    const res = await fetch(SHEET_URL);
+    const data = await res.json();
+    const wu = data['Weekly Updates'];
+    if (!wu) return;
+
+    // Row indices (0-based)
+    const R = { joiners:2, leavers:3, salesGrowth:4, sgTarget:5, transferIn:6,
+                transferOut:7, movement:8, appts:9, apptsShow:10, leads:13,
+                leadSale:14, attrition:17, visits:18, arrears:19 };
+    // Columns: Newc=1, Kot=2, Edge=3, Grp1=4, GH=7, Thor=8, LH=9, Grp2=10, Total=13
+    const C1 = [1,2,3,4]; // sector 1 + group
+    const C2 = [7,8,9,10]; // sector 2 + group
+    const TOT = 13;
+
+    const v = (r, c) => wu[r] ? (wu[r][c] ?? '—') : '—';
+    const num = (r, c) => { const x = v(r,c); return typeof x === 'number' ? x : null; };
+    const pct = (r, c) => { const x = num(r,c); return x !== null ? (x*100).toFixed(1)+'%' : '—'; };
+    const fmtVal = x => x !== null ? (x < 0 ? x.toLocaleString() : (x > 0 ? '+'+x : '0')) : '—';
+    const cls = x => x > 0 ? 'pos' : x < 0 ? 'neg' : '';
+    const pctCls = x => x > 0.22 ? 'pos' : x > 0.12 ? 'warn' : 'neg';
+    const money = x => x !== null && x !== '—' ? '$'+x.toFixed(2) : '—';
+
+    // Updated date from cell [0][0]
+    const updStr = wu[0] ? String(wu[0][0] || '').replace('Updated ','') : '';
+    const now = new Date(); const mo = now.toLocaleString('default',{month:'long'}); const yr = now.getFullYear();
+    document.getElementById('monthly-subtitle').textContent =
+      `Sales, retention and member movement — ${mo} ${yr} (updated ${updStr})`;
+    document.getElementById('mr-chart-month').textContent = `${mo} MTD`;
+    document.getElementById('mr-table-heading').textContent =
+      `Detailed Monthly Metrics — ${mo} ${yr} (MTD) — All Clubs`;
+    document.querySelector('.nav-badge').textContent = `Updated ${updStr}`;
+
+    // Cards
+    const totJoin = num(R.joiners, TOT);
+    const totLeave = num(R.leavers, TOT);
+    const totMove = num(R.movement, TOT);
+    const totSG = num(R.salesGrowth, TOT);
+    const totSGT = num(R.sgTarget, TOT);
+    const totAtt = num(R.attrition, TOT);
+    const totVis = num(R.visits, TOT);
+
+    document.getElementById('mr-joiners').textContent = totJoin !== null ? totJoin : '—';
+    document.getElementById('mr-leavers').textContent = totLeave !== null ? totLeave : '—';
+    document.getElementById('mr-movement').textContent = totMove !== null ? fmtVal(totMove) : '—';
+    document.getElementById('mr-salesgrowth').textContent = totSG !== null ? fmtVal(totSG) : '—';
+    if (totSG !== null && totSGT !== null) {
+      document.getElementById('mr-salesgrowth-sub').innerHTML =
+        `Target: ${totSGT} | Actual: ${fmtVal(totSG)}`;
+    }
+    document.getElementById('mr-attrition').textContent = totAtt !== null ? (totAtt*100).toFixed(2)+'%' : '—';
+    document.getElementById('mr-visits').textContent = totVis !== null ? totVis.toFixed(2) : '—';
+
+    // Build table rows helper
+    function buildRows(cols) {
+      const metrics = [
+        { label:'Joiners',           r:R.joiners,     fmt: (r,c) => num(r,c), isMoney:false, isPct:false, isLast:false },
+        { label:'Leavers',           r:R.leavers,     fmt: (r,c) => num(r,c), isMoney:false, isPct:false },
+        { label:'Sales Growth',      r:R.salesGrowth, fmt: (r,c) => num(r,c), isMoney:false, isPct:false },
+        { label:'Sales Growth Target',r:R.sgTarget,   fmt: (r,c) => num(r,c), isMoney:false, isPct:false, neutral:true },
+        { label:'Transfer In',       r:R.transferIn,  fmt: (r,c) => num(r,c), isMoney:false, isPct:false, neutral:true },
+        { label:'Transfer Out',      r:R.transferOut, fmt: (r,c) => num(r,c), isMoney:false, isPct:false, neutral:true },
+        { label:'Total Movement',    r:R.movement,    fmt: (r,c) => num(r,c), isMoney:false, isPct:false },
+        { label:'Appointments',      r:R.appts,       fmt: (r,c) => num(r,c), isMoney:false, isPct:false, neutral:true },
+        { label:'Appts Show',        r:R.apptsShow,   fmt: (r,c) => num(r,c), isMoney:false, isPct:false, neutral:true },
+        { label:'Leads',             r:R.leads,       fmt: (r,c) => num(r,c), isMoney:false, isPct:false, neutral:true },
+        { label:'Lead to Sale %',    r:R.leadSale,    fmt: (r,c) => num(r,c), isMoney:false, isPct:true },
+        { label:'Attrition %',       r:R.attrition,   fmt: (r,c) => num(r,c), isMoney:false, isPct:true, attrition:true },
+        { label:'Visits (Monthly)',  r:R.visits,      fmt: (r,c) => num(r,c), isMoney:false, isPct:false, neutral:true },
+        { label:'Arrears Collected', r:R.arrears,     fmt: (r,c) => num(r,c), isMoney:true, isPct:false },
+      ];
+      return metrics.map(m => {
+        const vals = cols.map(c => m.fmt(m.r, c));
+        const tds = vals.map((x, i) => {
+          const isGroup = i === cols.length - 1;
+          let display, klass = '';
+          if (m.isPct && !m.attrition) {
+            display = x !== null ? (x*100).toFixed(1)+'%' : '—';
+            klass = x !== null ? pctCls(x) : '';
+          } else if (m.attrition) {
+            display = x !== null ? (x*100).toFixed(2)+'%' : '—';
+          } else if (m.isMoney) {
+            display = x !== null ? '$'+x.toFixed(2) : '—';
+            klass = x > 0 ? 'pos' : '';
+          } else {
+            display = x !== null ? fmtVal(x) : '—';
+            if (!m.neutral) klass = x !== null ? cls(x) : '';
+          }
+          const inner = isGroup ? `<b>${display}</b>` : display;
+          return `<td${klass?' class="'+klass+'"':''}>${inner}</td>`;
+        });
+        return `<tr><td>${m.label}</td>${tds.join('')}</tr>`;
+      }).join('');
+    }
+
+    document.getElementById('mr-s1-tbody').innerHTML = buildRows(C1);
+    document.getElementById('mr-s2-tbody').innerHTML = buildRows(C2);
+
+    // Charts — destroy & redraw
+    const clubLabels = ['Newcastle','Kotara','Edgeworth','Greenhills','Thornton','Lake Haven'];
+    const allCols = [1,2,3,7,8,9];
+    const joiners = allCols.map(c => num(R.joiners, c));
+    const leavers  = allCols.map(c => { const x = num(R.leavers, c); return x !== null ? -x : null; });
+    const leadSalePcts = allCols.map(c => { const x = num(R.leadSale, c); return x !== null ? parseFloat((x*100).toFixed(1)) : null; });
+    const lsColors = leadSalePcts.map(x => x === null ? AMBER : x >= 22 ? GREEN : x >= 12 ? AMBER : RED);
+
+    if (chartMovementInst) chartMovementInst.destroy();
+    chartMovementInst = new Chart(document.getElementById('chartMovement'), {
+      type: 'bar',
+      data: {
+        labels: clubLabels,
+        datasets: [
+          { label: `Joiners (${mo} MTD)`, data: joiners, backgroundColor: GREEN+'cc' },
+          { label: `Leavers (${mo} MTD)`, data: leavers, backgroundColor: RED+'cc' },
+        ]
+      },
+      options: { responsive:true, plugins:{legend:{display:true,labels:{boxWidth:10,padding:10}}}, scales:{x:{grid:{color:'#2e3350'}},y:{grid:{color:'#2e3350'}}} }
+    });
+
+    if (chartLeadSaleInst) chartLeadSaleInst.destroy();
+    chartLeadSaleInst = new Chart(document.getElementById('chartLeadSale'), {
+      type: 'bar',
+      data: {
+        labels: clubLabels,
+        datasets: [{ label:'Lead to Sale %', data: leadSalePcts, backgroundColor: lsColors.map(c=>c+'cc') }]
+      },
+      options: {
+        responsive:true,
+        plugins: { legend:{display:false}, annotation:{annotations:[{type:'line',yMin:22,yMax:22,borderColor:GREEN,borderDash:[4,4],label:{content:'Good 22%',display:true}}]} },
+        scales: { x:{grid:{color:'#2e3350'}}, y:{grid:{color:'#2e3350'},ticks:{callback:v=>v+'%'},max:60} }
+      }
+    });
+
+  } catch(e) {
+    console.warn('Could not load live sheet data:', e);
+  }
+}
+
 // ─── NAVIGATION ───────────────────────────────────────────────
 function showPage(name, el) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -906,6 +1019,9 @@ new Chart(document.getElementById('chartOSAT'), {
   },
   options: { responsive:true, plugins:{legend:{display:true,labels:{boxWidth:10,padding:8}}}, scales:{x:{grid:{color:'#2e3350'}},y:{grid:{color:'#2e3350'},min:25,max:85}} }
 });
+
+// ─── LOAD LIVE DATA FROM SHEETS ───────────────────────────────
+loadFromSheets();
 </script>
 </body>
 </html>
